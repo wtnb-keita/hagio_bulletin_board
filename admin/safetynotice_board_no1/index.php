@@ -155,6 +155,11 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
                 <span class="label">告知</span>
                 <span class="desc">複数の告知を<br>一覧表示するパネル</span>
             </button>
+            <button class="type-btn" data-type="responsible" onclick="Admin.selectType(this)">
+                <span class="icon">🪧</span>
+                <span class="label">責任者掲示</span>
+                <span class="desc">管理者名を縦書きで<br>表示するパネル</span>
+            </button>
         </div>
 
         <!-- タイトル入力 -->

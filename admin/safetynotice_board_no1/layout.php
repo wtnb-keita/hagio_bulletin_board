@@ -118,7 +118,8 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .le-panel.type-media    { border-color: rgba(165,214,167,0.5); }
 .le-panel.type-text     { border-color: rgba(144,202,249,0.5); }
 .le-panel.type-accident { border-color: rgba(255,204,128,0.5); }
-.le-panel.type-notice   { border-color: rgba(128,222,234,0.5); }
+.le-panel.type-notice       { border-color: rgba(128,222,234,0.5); }
+.le-panel.type-responsible  { border-color: rgba(255,213,0,0.7); }
 
 /* タイトルバー */
 .le-panel-title {
@@ -137,7 +138,8 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .le-panel.type-media    .le-panel-title { background: rgba(46,125,50,0.85); }
 .le-panel.type-text     .le-panel-title { background: rgba(2,119,189,0.85); }
 .le-panel.type-accident .le-panel-title { background: rgba(239,108,0,0.85); }
-.le-panel.type-notice   .le-panel-title { background: rgba(0,131,143,0.85); }
+.le-panel.type-notice       .le-panel-title { background: rgba(0,131,143,0.85); }
+.le-panel.type-responsible  .le-panel-title { background: rgba(180,140,0,0.85); }
 .le-panel.no-title .le-panel-title      { display: none; }
 
 /* コンテンツエリア */
@@ -316,8 +318,8 @@ let panels   = <?= $panelsJson ?>;
 let activeId = null;
 let scale    = 0.5;
 
-const TYPE_ICONS = { media:'🖼', text:'📝', accident:'🏆', notice:'📢' };
-const TYPE_LABELS = { media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知' };
+const TYPE_ICONS = { media:'🖼', text:'📝', accident:'🏆', notice:'📢', responsible:'🪧' };
+const TYPE_LABELS = { media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知', responsible:'責任者掲示' };
 
 // ---- 初期化 ----
 function init() {
@@ -414,6 +416,15 @@ function panelBodyHtml(p) {
         <div style="font-size:9px;color:rgba(255,255,255,.8);border-left:2px solid #4fc3f7;padding:1px 4px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
           ${escHtml(n.title||n.text||'')}
         </div>`).join('')}</div>`;
+    }
+    case 'responsible': {
+      const role = escHtml(c.role || '化学物質管理者');
+      const name = escHtml(c.name || '');
+      const fs   = (c.fontSize || 40) + 'px';
+      return `<div style="display:flex;width:100%;height:100%;background:#FFD700;">
+        <div style="flex:1;background:#fff;margin:8%;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#111;overflow:hidden;border:2px solid #e0b800;">${name}</div>
+        <div style="writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#111;padding:6% 5% 6% 2%;white-space:nowrap;align-self:stretch;">${role}</div>
+      </div>`;
     }
     default: return '';
   }

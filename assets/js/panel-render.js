@@ -53,9 +53,10 @@ const PanelRender = (() => {
   }
 
   function textBody(panel) {
-    const c = panel.content || {};
+    const c  = panel.content || {};
     const wm = c.vertical ? 'vertical-rl' : 'horizontal-tb';
-    return `<div class="panel-body" style="--writing-mode:${wm}">${escHtml(c.text)}</div>`;
+    const fs = (c.fontSize || 14) + 'px';
+    return `<div class="panel-body" style="--writing-mode:${wm};font-size:${fs}">${escHtml(c.text)}</div>`;
   }
 
   function accidentBody(panel) {
@@ -132,6 +133,17 @@ const PanelRender = (() => {
     return `<div class="panel-body">${grid}</div>`;
   }
 
+  function responsibleBody(panel) {
+    const c    = panel.content || {};
+    const role = escHtml(c.role || '化学物質管理者');
+    const name = escHtml(c.name || '');
+    const fs   = (c.fontSize || 40) + 'px';
+    return `<div class="panel-body" style="display:flex;width:100%;height:100%;background:#FFD700;padding:0;overflow:hidden;">
+      <div style="flex:1;background:#fff;margin:8%;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#111;overflow:hidden;border:2px solid #e0b800;">${name}</div>
+      <div style="writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#111;padding:6% 5% 6% 2%;white-space:nowrap;align-self:stretch;">${role}</div>
+    </div>`;
+  }
+
   // ---- 公開API ----
 
   /**
@@ -152,11 +164,12 @@ const PanelRender = (() => {
       : '';
 
     const bodyHtml = {
-      media:    mediaBody,
-      text:     textBody,
-      accident: accidentBody,
-      notice:   noticeBody,
-      disaster: disasterBody,
+      media:       mediaBody,
+      text:        textBody,
+      accident:    accidentBody,
+      notice:      noticeBody,
+      disaster:    disasterBody,
+      responsible: responsibleBody,
     }[panel.type]?.(panel) ?? '';
 
     div.innerHTML = titleHtml + bodyHtml;

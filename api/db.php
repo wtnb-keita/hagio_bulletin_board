@@ -94,7 +94,8 @@ function fetchPanels(string $boardKey): array {
                 $panel['content'] = $d ? [
                     'text'     => $d['content'] ?? '',
                     'vertical' => (bool)$d['vertical'],
-                ] : ['text'=>'','vertical'=>false];
+                    'fontSize' => isset($d['font_size']) ? (int)$d['font_size'] : 14,
+                ] : ['text'=>'','vertical'=>false,'fontSize'=>14];
                 break;
 
             case 'accident':
@@ -121,6 +122,17 @@ function fetchPanels(string $boardKey): array {
                     'endDate'   => $n['end_date'] ?? '',
                     'text'      => $n['content'] ?? '',
                 ], $items)];
+                break;
+
+            case 'responsible':
+                $s = $pdo->prepare('SELECT * FROM panel_responsible WHERE panel_uid=? AND board_key=?');
+                $s->execute([$uid, $boardKey]);
+                $d = $s->fetch();
+                $panel['content'] = $d ? [
+                    'role'     => $d['role_name'],
+                    'name'     => $d['person_name'],
+                    'fontSize' => isset($d['font_size']) ? (int)$d['font_size'] : 40,
+                ] : ['role' => '化学物質管理者', 'name' => '', 'fontSize' => 40];
                 break;
         }
         $result[] = $panel;

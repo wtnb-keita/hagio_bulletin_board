@@ -124,6 +124,42 @@ body {
 }
 .panel-disaster .panel-body { overflow: hidden; }
 
+/* ---- 責任者掲示パネル ---- */
+.panel-responsible {
+  border-color: #e6b800;
+  background: #FFD700;
+}
+.panel-responsible .panel-title { background: #b8860b; color: #fff; }
+.panel-responsible .panel-body,
+.resp-body {
+  display: flex;
+  flex-direction: row;
+  background: #FFD700;
+  padding: 0;
+  overflow: hidden;
+}
+.resp-name {
+  flex: 1;
+  background: #fff;
+  margin: 8%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  font-weight: bold;
+  color: #111;
+  overflow: hidden;
+  border: 2px solid #e6b800;
+}
+.resp-role {
+  writing-mode: vertical-rl;
+  font-weight: bold;
+  color: #111;
+  padding: 6% 5% 6% 2%;
+  white-space: nowrap;
+  align-self: center;
+}
+
 /* ---- 汎用 ---- */
 .no-data { color: #555; font-size: 13px; padding: 12px; text-align: center; }
 

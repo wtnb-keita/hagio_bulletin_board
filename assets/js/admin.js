@@ -109,7 +109,7 @@ const Admin = (() => {
   }
 
   // ---- サイドバー ----
-  const TYPE_LABELS = { media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知', disaster:'災害速報' };
+  const TYPE_LABELS = { media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知', disaster:'災害速報', responsible:'責任者掲示' };
   function typeLabel(type) { return TYPE_LABELS[type] || type; }
 
   function renderSidebar() {
@@ -155,7 +155,7 @@ const Admin = (() => {
 
     // タイトルの自動補完（未入力の場合のみ）
     const titleInput = document.getElementById('addPanelTitle');
-    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報' };
+    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報', responsible:'化学物質管理者' };
     if (titleInput && !titleInput.value) titleInput.value = defaultTitles[_selectedType] || '';
 
     const confirm = document.getElementById('addPanelConfirm');
@@ -166,13 +166,15 @@ const Admin = (() => {
     if (!_selectedType) return;
     const titleInput = document.getElementById('addPanelTitle');
     const title = titleInput ? titleInput.value.trim() : '';
-    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報' };
+    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報', responsible:'化学物質管理者' };
 
+    const defaultSizes = { responsible: [120, 360] };
+    const [defW, defH] = defaultSizes[_selectedType] || [300, 200];
     const panel = {
       id: 'p' + nextId++,
       type: _selectedType,
       title: title || defaultTitles[_selectedType],
-      x: 10, y: 10, width: 300, height: 200,
+      x: 10, y: 10, width: defW, height: defH,
       content: defaultContent(_selectedType),
     };
     data.panels.push(panel);
@@ -184,11 +186,12 @@ const Admin = (() => {
   function defaultContent(type) {
     switch(type) {
       case 'media':    return { filePath:'', fileType:'', fileName:'', label:'' };
-      case 'text':     return { text:'', vertical: false };
+      case 'text':     return { text:'', vertical: false, fontSize: 14 };
       case 'accident': return { targetDays: 1500, startDate: new Date().toISOString().split('T')[0] };
       case 'notice':   return { notices: [] };
-      case 'disaster': return { items: [], slideshowEnabled: false, slideshowInterval: 5 };
-      default:         return {};
+      case 'disaster':     return { items: [], slideshowEnabled: false, slideshowInterval: 5 };
+      case 'responsible':  return { role: '化学物質管理者', name: '', fontSize: 40 };
+      default:             return {};
     }
   }
 
@@ -297,7 +300,8 @@ const Admin = (() => {
       case 'text':     html += textEditorHtml(panel);     break;
       case 'accident': html += accidentEditorHtml(panel); break;
       case 'notice':   html += noticeEditorHtml(panel);   break;
-      case 'disaster': html += disasterEditorHtml(panel); break;
+      case 'disaster':     html += disasterEditorHtml(panel);     break;
+      case 'responsible':  html += responsibleEditorHtml(panel);  break;
     }
 
     html += `
@@ -368,6 +372,14 @@ const Admin = (() => {
         return cnt
           ? `<div class="pc-empty" style="font-size:14px">🚨 ${cnt} 件</div>`
           : `<div class="pc-empty">速報なし</div>`;
+      }
+
+      case 'responsible': {
+        const fs = (c.fontSize || 40) + 'px';
+        return `<div style="display:flex;width:100%;height:100%;background:#FFD700;">
+          <div style="flex:1;background:#fff;margin:8%;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#222;overflow:hidden;border:2px solid #e0b800;">${esc(c.name||'')}</div>
+          <div style="writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#111;padding:6% 5% 6% 2%;white-space:nowrap;">${esc(c.role||'化学物質管理者')}</div>
+        </div>`;
       }
 
       default: return '';
@@ -628,6 +640,28 @@ const Admin = (() => {
       </div>`;
   }
 
+  // ---- 責任者掲示エディタ ----
+  function responsibleEditorHtml(panel) {
+    const c = panel.content || {};
+    const fs = c.fontSize || 40;
+    return `
+      <div class="card form-section">
+        <h3>責任者掲示設定</h3>
+        <div class="form-group">
+          <label>役職名（縦書き・右側に表示）</label>
+          <input type="text" id="f_role" value="${escAttr(c.role||'化学物質管理者')}" placeholder="化学物質管理者">
+        </div>
+        <div class="form-group">
+          <label>名前（縦書き・左側の白枠に表示）</label>
+          <input type="text" id="f_name" value="${escAttr(c.name||'')}" placeholder="氏名を入力">
+        </div>
+        <div class="form-row" style="align-items:center;gap:8px;margin-top:4px">
+          <label style="color:var(--text);font-size:13px;white-space:nowrap">文字サイズ (px)</label>
+          <input type="number" id="f_fontSize" value="${fs}" min="10" max="200" step="1" style="width:80px">
+        </div>
+      </div>`;
+  }
+
   function setupDisasterUpload(panel) {
     const input = document.getElementById('disasterFileInput');
     if (!input) return;
@@ -813,9 +847,15 @@ const Admin = (() => {
         <div class="form-group">
           <textarea id="f_text" rows="6">${esc(c.text)}</textarea>
         </div>
-        <div class="form-row" style="margin-top:6px;align-items:center;gap:8px">
-          <input type="checkbox" id="f_vertical" ${c.vertical ? 'checked' : ''}>
-          <label for="f_vertical" style="color:var(--text);font-size:13px">縦書き表示</label>
+        <div class="form-row" style="margin-top:6px;align-items:center;gap:16px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:13px">
+            <input type="checkbox" id="f_vertical" ${c.vertical ? 'checked' : ''}>
+            縦書き表示
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:13px;white-space:nowrap">
+            文字サイズ (px)
+            <input type="number" id="f_fontSize" value="${c.fontSize || 14}" min="6" max="200" step="1" style="width:70px">
+          </label>
         </div>
       </div>`;
   }
@@ -929,6 +969,7 @@ const Admin = (() => {
       case 'text':
         if (g('f_text'))     panel.content.text     = g('f_text').value;
         if (g('f_vertical')) panel.content.vertical = g('f_vertical').checked;
+        if (g('f_fontSize')) panel.content.fontSize = parseInt(g('f_fontSize').value) || 14;
         break;
       case 'accident':
         if (g('f_targetDays')) panel.content.targetDays = parseInt(g('f_targetDays').value) || 1500;
@@ -940,6 +981,11 @@ const Admin = (() => {
       case 'disaster':
         if (g('f_slideshow_enabled'))  panel.content.slideshowEnabled  = g('f_slideshow_enabled').checked;
         if (g('f_slideshow_interval')) panel.content.slideshowInterval = parseInt(g('f_slideshow_interval').value) || 5;
+        break;
+      case 'responsible':
+        if (g('f_role'))     panel.content.role     = g('f_role').value;
+        if (g('f_name'))     panel.content.name     = g('f_name').value;
+        if (g('f_fontSize')) panel.content.fontSize = parseInt(g('f_fontSize').value) || 40;
         break;
     }
 
@@ -1032,6 +1078,7 @@ const Admin = (() => {
     openDisasterLibrary,
     deleteDisasterItem,
     addDisasterTextItem,
+    // responsible は内部のみ
   };
 })();
 

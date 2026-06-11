@@ -65,6 +65,7 @@ if ($method === 'GET') {
                     $panel['content'] = [
                         'text'     => $d['content'] ?? '',
                         'vertical' => (bool)$d['vertical'],
+                        'fontSize' => isset($d['font_size']) ? (int)$d['font_size'] : 14,
                     ];
                 }
                 break;
@@ -116,6 +117,17 @@ if ($method === 'GET') {
                     }
                 }
                 unset($item);
+                break;
+
+            case 'responsible':
+                $s = $pdo->prepare('SELECT * FROM panel_responsible WHERE panel_uid=? AND board_key=?');
+                $s->execute([$uid, $boardKey]);
+                $d = $s->fetch();
+                $panel['content'] = $d ? [
+                    'role'     => $d['role_name'],
+                    'name'     => $d['person_name'],
+                    'fontSize' => isset($d['font_size']) ? (int)$d['font_size'] : 40,
+                ] : ['role' => '化学物質管理者', 'name' => '', 'fontSize' => 40];
                 break;
         }
 
@@ -191,13 +203,14 @@ if ($method === 'POST') {
 
                 case 'text':
                     $pdo->prepare(
-                        'INSERT INTO panel_text (panel_uid, board_key, content, vertical)
-                         VALUES (?,?,?,?)
-                         ON DUPLICATE KEY UPDATE content=VALUES(content), vertical=VALUES(vertical)'
+                        'INSERT INTO panel_text (panel_uid, board_key, content, vertical, font_size)
+                         VALUES (?,?,?,?,?)
+                         ON DUPLICATE KEY UPDATE content=VALUES(content), vertical=VALUES(vertical), font_size=VALUES(font_size)'
                     )->execute([
                         $uid, $boardKey,
                         $c['text']     ?? '',
                         ($c['vertical'] ?? false) ? 1 : 0,
+                        $c['fontSize'] ?? 14,
                     ]);
                     break;
 
@@ -225,6 +238,19 @@ if ($method === 'POST') {
                             'slideshowEnabled'  => $c['slideshowEnabled']  ?? false,
                             'slideshowInterval' => $c['slideshowInterval'] ?? 5,
                         ], JSON_UNESCAPED_UNICODE),
+                    ]);
+                    break;
+
+                case 'responsible':
+                    $pdo->prepare(
+                        'INSERT INTO panel_responsible (panel_uid, board_key, role_name, person_name, font_size)
+                         VALUES (?,?,?,?,?)
+                         ON DUPLICATE KEY UPDATE role_name=VALUES(role_name), person_name=VALUES(person_name), font_size=VALUES(font_size)'
+                    )->execute([
+                        $uid, $boardKey,
+                        $c['role']     ?? '化学物質管理者',
+                        $c['name']     ?? '',
+                        $c['fontSize'] ?? 40,
                     ]);
                     break;
 
@@ -275,7 +301,7 @@ errorResponse('Method not allowed', 405);
 
 // ---- ヘルパー ----
 function deletePanel(PDO $pdo, string $uid, string $boardKey): void {
-    foreach (['panel_media','panel_text','panel_accident','panel_notice'] as $tbl) {
+    foreach (['panel_media','panel_text','panel_accident','panel_notice','panel_responsible'] as $tbl) {
         $pdo->prepare("DELETE FROM {$tbl} WHERE panel_uid=? AND board_key=?")->execute([$uid, $boardKey]);
     }
     $pdo->prepare('DELETE FROM notice_items WHERE panel_uid=? AND board_key=?')->execute([$uid, $boardKey]);

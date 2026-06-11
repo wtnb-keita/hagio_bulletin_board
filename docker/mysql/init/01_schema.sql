@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS panels (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   board_key   VARCHAR(64) NOT NULL COMMENT 'boards.board_key',
   panel_uid   VARCHAR(64) NOT NULL COMMENT 'フロントが発行するユニークID',
-  type        ENUM('media','text','accident','notice') NOT NULL,
+  type        VARCHAR(32) NOT NULL,
   title       VARCHAR(255) DEFAULT '' COMMENT 'パネルヘッダー',
   pos_x       INT NOT NULL DEFAULT 0,
   pos_y       INT NOT NULL DEFAULT 0,
