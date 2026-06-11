@@ -98,6 +98,25 @@ if ($method === 'GET') {
                     ], $items),
                 ];
                 break;
+
+            case 'disaster':
+                $s = $pdo->prepare('SELECT content FROM panel_text WHERE panel_uid=? AND board_key=?');
+                $s->execute([$uid, $boardKey]);
+                $d = $s->fetch();
+                if ($d && $d['content']) {
+                    $decoded = json_decode($d['content'], true);
+                    $panel['content'] = is_array($decoded) ? $decoded : ['items'=>[], 'slideshowEnabled'=>false, 'slideshowInterval'=>5];
+                } else {
+                    $panel['content'] = ['items'=>[], 'slideshowEnabled'=>false, 'slideshowInterval'=>5];
+                }
+                // filePath を URL に変換
+                foreach ($panel['content']['items'] ?? [] as &$item) {
+                    if (!empty($item['filePath']) && !str_starts_with($item['filePath'], 'http') && !str_starts_with($item['filePath'], '/')) {
+                        $item['filePath'] = uploadUrlBase() . basename($item['filePath']);
+                    }
+                }
+                unset($item);
+                break;
         }
 
         $result[] = $panel;
@@ -191,6 +210,21 @@ if ($method === 'POST') {
                         $uid, $boardKey,
                         $c['targetDays'] ?? 1500,
                         $c['startDate']  ?? date('Y-m-d'),
+                    ]);
+                    break;
+
+                case 'disaster':
+                    $pdo->prepare(
+                        'INSERT INTO panel_text (panel_uid, board_key, content, vertical)
+                         VALUES (?,?,?,0)
+                         ON DUPLICATE KEY UPDATE content=VALUES(content)'
+                    )->execute([
+                        $uid, $boardKey,
+                        json_encode([
+                            'items'             => $c['items']             ?? [],
+                            'slideshowEnabled'  => $c['slideshowEnabled']  ?? false,
+                            'slideshowInterval' => $c['slideshowInterval'] ?? 5,
+                        ], JSON_UNESCAPED_UNICODE),
                     ]);
                     break;
 

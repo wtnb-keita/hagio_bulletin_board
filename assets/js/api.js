@@ -4,8 +4,8 @@
  */
 
 const API = (() => {
-  const BASE     = typeof BASE_URL !== 'undefined' ? BASE_URL + '/api' : '../../api';
-  const BOARD_KEY = 'safety_board_1';
+  const BASE      = typeof BASE_URL !== 'undefined' ? BASE_URL + '/api' : '../../api';
+  const BOARD_KEY = typeof ADMIN_BOARD_KEY !== 'undefined' ? ADMIN_BOARD_KEY : 'safety_board_1';
 
   async function request(url, options = {}) {
     const res = await fetch(url, options);

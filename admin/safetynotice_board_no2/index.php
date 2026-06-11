@@ -1,19 +1,17 @@
 <?php
 require_once __DIR__ . '/../../api/db.php';
 
-const BOARD_KEY = 'safety_board_1';
+const BOARD_KEY = 'safety_board_2';
 
-// ボード設定取得
-$boardConfig = ['name'=>'安全掲示板 No.1', 'width'=>1800, 'height'=>900];
+$boardConfig = ['name'=>'安全掲示板 No.2', 'width'=>1800, 'height'=>900];
 try {
     $pdo  = getPDO();
     $stmt = $pdo->prepare('SELECT * FROM boards WHERE board_key = ?');
     $stmt->execute([BOARD_KEY]);
     $row  = $stmt->fetch();
     if ($row) $boardConfig = ['name'=>$row['name'], 'width'=>(int)$row['width'], 'height'=>(int)$row['height']];
-} catch (Throwable $e) { /* DBエラーはパネル取得時にまとめて処理 */ }
+} catch (Throwable $e) {}
 
-// DBからパネル一覧取得（失敗時は空配列）
 $panels = [];
 $dbError = '';
 try {
@@ -22,7 +20,6 @@ try {
     $dbError = $e->getMessage();
 }
 
-// 次のパネルUID用に既存IDの最大値を計算
 $maxId = 0;
 foreach ($panels as $p) {
     $n = (int)preg_replace('/\D/', '', $p['id']);
@@ -30,7 +27,6 @@ foreach ($panels as $p) {
 }
 $nextId = $maxId + 1;
 
-// PHPからJSへ渡すデータ
 $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
 ?>
 <!DOCTYPE html>
@@ -38,12 +34,11 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>管理画面 - 安全掲示板 No.1</title>
+<title>管理画面 - 安全掲示板 No.2</title>
 <link rel="stylesheet" href="../../assets/css/common.css">
 <link rel="stylesheet" href="../../assets/css/admin.css">
 <style>
-/* ---- パネル追加モーダル ---- */
-#addPanelModal .modal { width: 420px; }
+#addPanelModal .modal { width: 480px; }
 
 .type-selector {
     display: grid;
@@ -68,6 +63,7 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
 }
 .type-btn:hover    { border-color: var(--accent); }
 .type-btn.selected { border-color: var(--accent); background: rgba(233,69,96,0.1); }
+.type-btn.type-disaster.selected { border-color: #f44336; background: rgba(244,67,54,0.1); }
 .type-btn .icon    { font-size: 26px; }
 .type-btn .label   { font-weight: bold; }
 .type-btn .desc    { font-size: 11px; color: var(--text-dim); text-align: center; }
@@ -103,8 +99,8 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
 </header>
 
 <nav class="admin-nav">
-    <a href="<?= rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') ?>/index.php" class="active">安全掲示板 No.1</a>
-    <a href="<?= rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/') ?>/safetynotice_board_no2/index.php">安全掲示板 No.2</a>
+    <a href="<?= rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/') ?>/safetynotice_board_no1/index.php">安全掲示板 No.1</a>
+    <a href="<?= rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') ?>/index.php" class="active">安全掲示板 No.2</a>
 </nav>
 
 <div class="admin-body">
@@ -121,7 +117,6 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
     </main>
 </div>
 
-<!-- トースト -->
 <div class="toast" id="toast"></div>
 
 <!-- ========== パネル追加モーダル ========== -->
@@ -131,8 +126,6 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
             <h2>パネルを追加</h2>
             <button class="btn btn-secondary btn-sm" onclick="Admin.closeAddPanel()" style="margin-left:auto">✕</button>
         </div>
-
-        <!-- 種別選択 -->
         <p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">パネルの種別を選択してください</p>
         <div class="type-selector">
             <button class="type-btn" data-type="media" onclick="Admin.selectType(this)">
@@ -155,14 +148,16 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
                 <span class="label">告知</span>
                 <span class="desc">複数の告知を<br>一覧表示するパネル</span>
             </button>
+            <button class="type-btn type-disaster" data-type="disaster" onclick="Admin.selectType(this)" style="grid-column:1/-1">
+                <span class="icon">🚨</span>
+                <span class="label">災害速報</span>
+                <span class="desc">○○会災害速報を表示するパネル（画像・PDF・テキスト複数対応・スライドショー）</span>
+            </button>
         </div>
-
-        <!-- タイトル入力 -->
         <div class="form-group" style="margin-bottom:0">
             <label>タイトル</label>
             <input type="text" id="addPanelTitle" placeholder="パネルのタイトル（後から変更できます）">
         </div>
-
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="Admin.closeAddPanel()">キャンセル</button>
             <button class="btn btn-primary" id="addPanelConfirm" onclick="Admin.confirmAddPanel()" disabled>追加する</button>
@@ -185,7 +180,6 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
     </div>
 </div>
 
-<!-- DBエラー表示 -->
 <?php if ($dbError): ?>
 <div style="position:fixed;top:60px;left:50%;transform:translateX(-50%);
             background:#c62828;color:#fff;padding:10px 20px;border-radius:6px;
@@ -254,11 +248,9 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
                 <button class="btn btn-secondary btn-sm" onclick="Admin.closeUploadLibrary()">✕ 閉じる</button>
             </div>
         </div>
-        <!-- ドロップゾーン -->
         <div class="file-drop" id="libDropZone" style="margin-bottom:12px;padding:10px 16px;">
             ここにファイルをドロップして追加
         </div>
-        <!-- ファイルグリッド -->
         <div id="libGrid" style="
             display:grid;
             grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
@@ -274,12 +266,11 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
 <script src="../../assets/js/api.js"></script>
 <script src="../../assets/js/panel-render.js"></script>
 <script>
-// PHPからDBデータを初期値として注入
 const INITIAL_PANELS  = <?= $panelsJson ?>;
 const INITIAL_NEXT_ID = <?= $nextId ?>;
 const BASE_URL        = '<?= rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROOT'],'/\\'), '', dirname(dirname(dirname(__FILE__))))), '/') ?>';
-const ADMIN_BOARD_KEY = 'safety_board_1';
-const ADMIN_VIEW_URL  = '/view_board/safetynotice_board_no1/index.php';
+const ADMIN_BOARD_KEY = 'safety_board_2';
+const ADMIN_VIEW_URL  = '/view_board/safetynotice_board_no2/index.php';
 </script>
 <script src="../../assets/js/admin.js"></script>
 </body>

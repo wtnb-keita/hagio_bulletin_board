@@ -92,6 +92,46 @@ const PanelRender = (() => {
     return `<div class="panel-body">${items}</div>`;
   }
 
+  function disasterBody(panel) {
+    const c = panel.content || {};
+    const items = c.items || [];
+    if (!items.length) {
+      return `<div class="panel-body"><div class="no-data">🚨 速報なし</div></div>`;
+    }
+
+    const itemHtml = items.map((item, i) => {
+      let inner;
+      if (item.fileType && item.fileType.startsWith('image/')) {
+        inner = `<img src="${item.filePath}" alt="${escHtml(item.fileName)}" style="width:100%;height:100%;object-fit:contain;display:block;">`;
+      } else if (item.fileType === 'application/pdf') {
+        inner = `<iframe src="${item.filePath}#toolbar=0&navpanes=0&scrollbar=0" title="${escHtml(item.fileName)}" style="width:100%;height:100%;border:none;background:#fff;"></iframe>`;
+      } else {
+        inner = `<div style="padding:8px;color:#e0e0e0;font-size:14px;white-space:pre-wrap;word-break:break-all;">${escHtml(item.text||'')}</div>`;
+      }
+      return `<div class="disaster-item" data-idx="${i}" style="${i===0?'':'display:none'}">${inner}</div>`;
+    }).join('');
+
+    const grid = items.length <= 4
+      ? (() => {
+          const cols = items.length <= 2 ? items.length : 2;
+          const rows = Math.ceil(items.length / cols);
+          return `<div class="disaster-grid" style="display:grid;grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr);gap:4px;width:100%;height:100%;">
+            ${items.map(item => {
+              if (item.fileType && item.fileType.startsWith('image/')) {
+                return `<div style="overflow:hidden;"><img src="${item.filePath}" alt="${escHtml(item.fileName)}" style="width:100%;height:100%;object-fit:contain;display:block;"></div>`;
+              } else if (item.fileType === 'application/pdf') {
+                return `<div style="overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;">📄<br><span style="font-size:10px">${escHtml(item.fileName||'PDF')}</span></div>`;
+              } else {
+                return `<div style="padding:4px;color:#e0e0e0;font-size:11px;overflow:hidden;">${escHtml((item.text||'').slice(0,100))}</div>`;
+              }
+            }).join('')}
+          </div>`;
+        })()
+      : `<div class="disaster-slideshow" style="position:relative;width:100%;height:100%;">${itemHtml}</div>`;
+
+    return `<div class="panel-body">${grid}</div>`;
+  }
+
   // ---- 公開API ----
 
   /**
@@ -116,9 +156,27 @@ const PanelRender = (() => {
       text:     textBody,
       accident: accidentBody,
       notice:   noticeBody,
+      disaster: disasterBody,
     }[panel.type]?.(panel) ?? '';
 
     div.innerHTML = titleHtml + bodyHtml;
+
+    if (panel.type === 'disaster') {
+      const c = panel.content || {};
+      const items = c.items || [];
+      if ((c.slideshowEnabled || items.length > 4) && items.length > 1) {
+        const interval = Math.max(1, c.slideshowInterval || 5) * 1000;
+        let cur = 0;
+        setInterval(() => {
+          const els = div.querySelectorAll('.disaster-item');
+          if (!els.length) return;
+          els[cur].style.display = 'none';
+          cur = (cur + 1) % els.length;
+          els[cur].style.display = '';
+        }, interval);
+      }
+    }
+
     return div;
   }
 

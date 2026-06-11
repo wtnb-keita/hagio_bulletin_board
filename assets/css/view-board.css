@@ -110,6 +110,20 @@ body {
 .notice-item-period { font-size: 11px; color: #888; margin-bottom: 3px; }
 .notice-item-text   { font-size: 12px; white-space: pre-wrap; word-break: break-all; }
 
+/* ---- 災害速報パネル ---- */
+.panel-disaster { border-color: #f44336; }
+.panel-disaster .panel-title {
+  background: repeating-linear-gradient(
+    45deg,
+    #f44336 0px, #f44336 10px,
+    #111    10px, #111    20px
+  );
+  color: #fff;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+.panel-disaster .panel-body { overflow: hidden; }
+
 /* ---- 汎用 ---- */
 .no-data { color: #555; font-size: 13px; padding: 12px; text-align: center; }
 

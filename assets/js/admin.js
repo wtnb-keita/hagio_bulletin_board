@@ -9,7 +9,7 @@ const Admin = (() => {
   let activeId = null;
   let nextId   = typeof INITIAL_NEXT_ID !== 'undefined' ? INITIAL_NEXT_ID : 1;
 
-  const BOARD_KEY = 'safety_board_1';
+  const BOARD_KEY = typeof ADMIN_BOARD_KEY !== 'undefined' ? ADMIN_BOARD_KEY : 'safety_board_1';
   const esc = PanelRender.escHtml;
 
   function escAttr(s) {
@@ -109,7 +109,7 @@ const Admin = (() => {
   }
 
   // ---- サイドバー ----
-  const TYPE_LABELS = { media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知' };
+  const TYPE_LABELS = { media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知', disaster:'災害速報' };
   function typeLabel(type) { return TYPE_LABELS[type] || type; }
 
   function renderSidebar() {
@@ -155,7 +155,7 @@ const Admin = (() => {
 
     // タイトルの自動補完（未入力の場合のみ）
     const titleInput = document.getElementById('addPanelTitle');
-    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知' };
+    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報' };
     if (titleInput && !titleInput.value) titleInput.value = defaultTitles[_selectedType] || '';
 
     const confirm = document.getElementById('addPanelConfirm');
@@ -166,7 +166,7 @@ const Admin = (() => {
     if (!_selectedType) return;
     const titleInput = document.getElementById('addPanelTitle');
     const title = titleInput ? titleInput.value.trim() : '';
-    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知' };
+    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報' };
 
     const panel = {
       id: 'p' + nextId++,
@@ -187,6 +187,7 @@ const Admin = (() => {
       case 'text':     return { text:'', vertical: false };
       case 'accident': return { targetDays: 1500, startDate: new Date().toISOString().split('T')[0] };
       case 'notice':   return { notices: [] };
+      case 'disaster': return { items: [], slideshowEnabled: false, slideshowInterval: 5 };
       default:         return {};
     }
   }
@@ -296,6 +297,7 @@ const Admin = (() => {
       case 'text':     html += textEditorHtml(panel);     break;
       case 'accident': html += accidentEditorHtml(panel); break;
       case 'notice':   html += noticeEditorHtml(panel);   break;
+      case 'disaster': html += disasterEditorHtml(panel); break;
     }
 
     html += `
@@ -307,7 +309,8 @@ const Admin = (() => {
     ed.innerHTML = html;
 
     initPositionEditor();
-    if (panel.type === 'media') setupFileDrop(panel);
+    if (panel.type === 'media')    setupFileDrop(panel);
+    if (panel.type === 'disaster') setupDisasterUpload(panel);
   }
 
   // ---- タイトルあり/なし切り替え ----
@@ -358,6 +361,13 @@ const Admin = (() => {
         return `<div class="pc-notice">${items.map(n =>
           `<div class="pc-notice-item">${esc(n.title||'（無題）')}</div>`
         ).join('')}</div>`;
+      }
+
+      case 'disaster': {
+        const cnt = (c.items || []).length;
+        return cnt
+          ? `<div class="pc-empty" style="font-size:14px">🚨 ${cnt} 件</div>`
+          : `<div class="pc-empty">速報なし</div>`;
       }
 
       default: return '';
@@ -564,8 +574,112 @@ const Admin = (() => {
     if (prev) prev.innerHTML = '';
   }
 
+  // ---- 災害速報エディタ ----
+  function disasterEditorHtml(panel) {
+    const c = panel.content || {};
+    const items = c.items || [];
+
+    const itemCards = items.map((item, i) => {
+      const thumb = item.fileType
+        ? (item.fileType.startsWith('image/')
+            ? `<img src="${item.filePath}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;flex-shrink:0;">`
+            : `<div style="width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--surface2);border-radius:4px;flex-shrink:0;">📄</div>`)
+        : `<div style="width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--surface2);border-radius:4px;flex-shrink:0;">📝</div>`;
+      const label = item.fileType ? esc(item.fileName || item.filePath) : `テキスト: ${esc((item.text||'').slice(0,40))}`;
+      return `
+        <div class="notice-card" style="display:flex;align-items:center;gap:10px;padding:8px 10px;">
+          ${thumb}
+          <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
+          <button class="btn btn-danger btn-sm" onclick="Admin.deleteDisasterItem(${i})">✕</button>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="card form-section">
+        <h3>コンテンツ（画像・PDF・テキスト）</h3>
+        <p style="font-size:11px;color:var(--text-dim);margin-bottom:8px">
+          画像・PDF・テキストを複数追加できます。多くなるとスライドショーで表示します。
+        </p>
+        <div id="disasterItemList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+          ${itemCards || '<div style="color:var(--text-dim);font-size:12px;padding:8px 0">コンテンツがありません</div>'}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label class="btn btn-primary btn-sm" style="cursor:pointer">
+            ＋ アップロード
+            <input type="file" id="disasterFileInput" accept="image/*,application/pdf" multiple style="display:none">
+          </label>
+          <button class="btn btn-secondary btn-sm" onclick="Admin.openDisasterLibrary()">📁 ライブラリから選択</button>
+          <button class="btn btn-secondary btn-sm" onclick="Admin.addDisasterTextItem()">📝 テキスト追加</button>
+        </div>
+      </div>
+      <div class="card form-section">
+        <h3>スライドショー設定</h3>
+        <div class="form-row" style="align-items:center;gap:16px">
+          <label style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:13px;white-space:nowrap">
+            <input type="checkbox" id="f_slideshow_enabled" ${c.slideshowEnabled ? 'checked' : ''}>
+            スライドショー表示
+          </label>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label style="color:var(--text-dim);font-size:12px;white-space:nowrap">切替間隔</label>
+            <input type="number" id="f_slideshow_interval" value="${c.slideshowInterval || 5}" min="1" max="60" style="width:70px">
+            <span style="font-size:12px;color:var(--text-dim)">秒</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function setupDisasterUpload(panel) {
+    const input = document.getElementById('disasterFileInput');
+    if (!input) return;
+    input.addEventListener('change', async () => {
+      const files = [...input.files];
+      const allowed = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+      for (const file of files) {
+        if (!allowed.includes(file.type)) continue;
+        try {
+          const json = await API.uploadFile(file);
+          panel.content.items.push({ filePath: json.filePath, fileType: json.fileType, fileName: json.fileName });
+        } catch(e) { showToast('アップロード失敗: ' + e.message, true); }
+      }
+      input.value = '';
+      renderEditor(panel);
+    });
+  }
+
+  function deleteDisasterItem(i) {
+    const panel = data.panels.find(p => p.id === activeId);
+    if (!panel) return;
+    panel.content.items.splice(i, 1);
+    renderEditor(panel);
+  }
+
+  function addDisasterTextItem() {
+    const panel = data.panels.find(p => p.id === activeId);
+    if (!panel) return;
+    const text = prompt('表示するテキストを入力してください:');
+    if (text === null) return;
+    panel.content.items.push({ text });
+    renderEditor(panel);
+  }
+
+  let _libContext = 'media';
+
+  function openDisasterLibrary() {
+    _libContext = 'disaster';
+    document.getElementById('uploadLibModal').classList.add('open');
+    loadLibFiles();
+    setupLibDrop();
+    const inp = document.getElementById('libUploadInput');
+    inp.replaceWith(inp.cloneNode(true));
+    document.getElementById('libUploadInput').addEventListener('change', e => {
+      libUploadFiles([...e.target.files]);
+      e.target.value = '';
+    });
+  }
+
   // ---- アップロードライブラリモーダル ----
   function openUploadLibrary() {
+    _libContext = 'media';
     document.getElementById('uploadLibModal').classList.add('open');
     loadLibFiles();
     setupLibDrop();
@@ -665,7 +779,14 @@ const Admin = (() => {
   // ファイルを選択してパネルに設定
   function pickFile(filePath, fileType, fileName) {
     const panel = data.panels.find(p => p.id === activeId);
-    if (!panel || panel.type !== 'media') return;
+    if (!panel) return;
+    if (_libContext === 'disaster' && panel.type === 'disaster') {
+      panel.content.items.push({ filePath, fileType, fileName });
+      closeUploadLibrary();
+      renderEditor(panel);
+      return;
+    }
+    if (panel.type !== 'media') return;
     panel.content.filePath = filePath;
     panel.content.fileType = fileType;
     panel.content.fileName = fileName;
@@ -816,6 +937,10 @@ const Admin = (() => {
       case 'notice':
         syncNotices(panel);
         break;
+      case 'disaster':
+        if (g('f_slideshow_enabled'))  panel.content.slideshowEnabled  = g('f_slideshow_enabled').checked;
+        if (g('f_slideshow_interval')) panel.content.slideshowInterval = parseInt(g('f_slideshow_interval').value) || 5;
+        break;
     }
 
     renderSidebar();
@@ -842,7 +967,7 @@ const Admin = (() => {
     if (height < 200 || height > 4320) { showToast('高さは 200〜4320 で指定してください', true); return; }
 
     try {
-      const json = await API.saveBoard({ name, width, height });
+      const json = await API.saveBoard({ name, width, height }, BOARD_KEY);
       if (json.ok) {
         closeBoardSettings();
         showToast('ボード設定を保存しました。ページを再読み込みします...');
@@ -874,7 +999,8 @@ const Admin = (() => {
 
   function openViewBoard() {
     const base = (typeof BASE_URL !== 'undefined' ? BASE_URL : '');
-    window.open(`${base}/view_board/safetynotice_board_no1/index.php`, '_blank');
+    const path = (typeof ADMIN_VIEW_URL !== 'undefined' ? ADMIN_VIEW_URL : '/view_board/safetynotice_board_no1/index.php');
+    window.open(`${base}${path}`, '_blank');
   }
 
   // ---- 公開API ----
@@ -903,6 +1029,9 @@ const Admin = (() => {
     openLayoutPreview,
     closeLayoutPreview,
     openViewBoard,
+    openDisasterLibrary,
+    deleteDisasterItem,
+    addDisasterTextItem,
   };
 })();
 

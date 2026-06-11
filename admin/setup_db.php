@@ -21,7 +21,7 @@ $sqls = [
             id          INT AUTO_INCREMENT PRIMARY KEY,
             board_key   VARCHAR(64) NOT NULL,
             panel_uid   VARCHAR(64) NOT NULL,
-            type        ENUM('media','text','accident','notice') NOT NULL,
+            type        ENUM('media','text','accident','notice','disaster') NOT NULL,
             title       VARCHAR(255) DEFAULT '',
             pos_x       INT NOT NULL DEFAULT 0,
             pos_y       INT NOT NULL DEFAULT 0,
@@ -78,9 +78,16 @@ $sqls = [
             sort_order  INT NOT NULL DEFAULT 0
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ",
-    'boards 初期データ投入' => "
+    'panels.type に disaster を追加' => "
+        ALTER TABLE panels MODIFY COLUMN type ENUM('media','text','accident','notice','disaster') NOT NULL
+    ",
+    'boards 初期データ投入 No.1' => "
         INSERT IGNORE INTO boards (board_key, name, width, height)
         VALUES ('safety_board_1', '安全掲示板 No.1', 1800, 900)
+    ",
+    'boards 初期データ投入 No.2' => "
+        INSERT IGNORE INTO boards (board_key, name, width, height)
+        VALUES ('safety_board_2', '安全掲示板 No.2', 1800, 900)
     ",
 ];
 
