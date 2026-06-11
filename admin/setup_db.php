@@ -78,8 +78,28 @@ $sqls = [
             sort_order  INT NOT NULL DEFAULT 0
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ",
-    'panels.type に disaster を追加' => "
-        ALTER TABLE panels MODIFY COLUMN type ENUM('media','text','accident','notice','disaster') NOT NULL
+    'panels.type に disaster/responsible を追加' => "
+        ALTER TABLE panels MODIFY COLUMN type ENUM('media','text','accident','notice','disaster','responsible') NOT NULL
+    ",
+    'staff テーブル作成' => "
+        CREATE TABLE IF NOT EXISTS staff (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            board_key   VARCHAR(64) NOT NULL DEFAULT 'staff_board',
+            name        VARCHAR(255) NOT NULL,
+            department  VARCHAR(255) DEFAULT '',
+            photo_path  VARCHAR(512) DEFAULT '',
+            sort_order  INT NOT NULL DEFAULT 0,
+            created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ",
+    'staff_qualifications テーブル作成' => "
+        CREATE TABLE IF NOT EXISTS staff_qualifications (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            staff_id    INT NOT NULL,
+            name        VARCHAR(255) NOT NULL,
+            sort_order  INT NOT NULL DEFAULT 0
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ",
     'boards 初期データ投入 No.1' => "
         INSERT IGNORE INTO boards (board_key, name, width, height)
@@ -88,6 +108,10 @@ $sqls = [
     'boards 初期データ投入 No.2' => "
         INSERT IGNORE INTO boards (board_key, name, width, height)
         VALUES ('safety_board_2', '安全掲示板 No.2', 1800, 900)
+    ",
+    'boards 初期データ投入 スタッフ掲示板' => "
+        INSERT IGNORE INTO boards (board_key, name, width, height)
+        VALUES ('staff_board', '安全資格者掲示板', 1800, 900)
     ",
 ];
 

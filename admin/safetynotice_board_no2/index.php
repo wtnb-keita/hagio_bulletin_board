@@ -101,6 +101,7 @@ $panelsJson = json_encode($panels, JSON_UNESCAPED_UNICODE);
 <nav class="admin-nav">
     <a href="<?= rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/') ?>/safetynotice_board_no1/index.php">安全掲示板 No.1</a>
     <a href="<?= rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') ?>/index.php" class="active">安全掲示板 No.2</a>
+    <a href="<?= rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/') ?>/staff_board/index.php">安全資格者掲示板</a>
 </nav>
 
 <div class="admin-body">
