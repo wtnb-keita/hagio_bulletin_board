@@ -200,6 +200,7 @@ const Admin = (() => {
       document.getElementById('editor').innerHTML = '<div class="editor-empty">← パネルを選択して編集</div>';
     }
     renderSidebar();
+    saveAll();
   }
 
   // ---- パネル選択 ----
@@ -334,7 +335,7 @@ const Admin = (() => {
         if (c.fileType === 'application/pdf') {
           return `<div class="pc-empty" style="font-size:48px">📄<br><span style="font-size:14px">${esc(c.fileName||'PDF')}</span></div>`;
         }
-        return `<img src="${c.filePath}" alt="">`;
+        return `<img src="${c.filePath}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="pc-empty" style="display:none">画像なし（ファイル未存在）</div>`;
 
       case 'text': {
         const preview = (c.text || '').slice(0, 200);
@@ -600,16 +601,20 @@ const Admin = (() => {
           ? (f.fileSize/1024/1024).toFixed(1)+' MB'
           : Math.round(f.fileSize/1024)+' KB';
         return `
-          <div onclick="Admin.pickFile('${esc(f.filePath)}','${esc(f.fileType)}','${esc(f.fileName)}')"
-               style="border:2px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;
-                      background:var(--surface);transition:border-color .15s;"
+          <div style="border:2px solid var(--border);border-radius:6px;overflow:hidden;
+                      background:var(--surface);transition:border-color .15s;position:relative;"
                onmouseover="this.style.borderColor='var(--accent)'"
                onmouseout="this.style.borderColor='var(--border)'">
-            ${thumb}
-            <div style="padding:4px 6px;">
-              <div style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(f.fileName)}</div>
-              <div style="font-size:10px;color:var(--text-dim)">${kb}</div>
+            <div onclick="Admin.pickFile('${esc(f.filePath)}','${esc(f.fileType)}','${esc(f.fileName)}')" style="cursor:pointer;">
+              ${thumb}
+              <div style="padding:4px 6px;">
+                <div style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(f.fileName)}</div>
+                <div style="font-size:10px;color:var(--text-dim)">${kb}</div>
+              </div>
             </div>
+            <button class="btn btn-danger btn-sm"
+                    onclick="event.stopPropagation();Admin.deleteLibFile('${esc(f.fileName)}')"
+                    style="position:absolute;top:4px;right:4px;padding:1px 5px;font-size:10px;line-height:1.4;">✕</button>
           </div>`;
       }).join('');
     } catch(e) {
@@ -643,6 +648,18 @@ const Admin = (() => {
     zone.textContent = 'ここにファイルをドロップして追加';
     showToast(`${done} 件アップロードしました`);
     loadLibFiles();
+  }
+
+  // アップロードライブラリからファイルを削除
+  async function deleteLibFile(fileName) {
+    if (!confirm(`「${fileName}」を削除しますか？\nこのファイルを使用中のパネルでは画像が表示されなくなります。`)) return;
+    try {
+      await API.deleteUpload(fileName);
+      showToast('削除しました');
+      loadLibFiles();
+    } catch(e) {
+      alert('削除失敗: ' + e.message);
+    }
   }
 
   // ファイルを選択してパネルに設定
@@ -879,6 +896,7 @@ const Admin = (() => {
     closeUploadLibrary,
     pickFile,
     onPickFile,
+    deleteLibFile,
     openBoardSettings,
     closeBoardSettings,
     saveBoardSettings,
