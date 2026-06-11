@@ -1,0 +1,49 @@
+services:
+  php:
+    build: ./docker/php
+    container_name: hagio_php
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - mysql
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Tokyo
+
+  mysql:
+    image: mysql:8.0
+    container_name: hagio_mysql
+    ports:
+      - "3306:3306"
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      TZ: Asia/Tokyo
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: hagio_phpmyadmin
+    ports:
+      - "8888:80"
+    env_file:
+      - .env
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${DB_USER}
+      PMA_PASSWORD: ${DB_PASS}
+      TZ: Asia/Tokyo
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:

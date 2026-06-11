@@ -1,0 +1,232 @@
+<?php
+$baseUrl = rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROOT'],'/\\'), '', dirname(dirname(dirname(__FILE__))))), '/');
+$adminUrl = $baseUrl . '/admin';
+?>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>アップロード管理</title>
+<link rel="stylesheet" href="../../assets/css/common.css">
+<link rel="stylesheet" href="../../assets/css/admin.css">
+<style>
+  body { min-height: 100vh; display: flex; flex-direction: column; }
+  .page-body { flex: 1; overflow-y: auto; }
+  .empty-state {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 60px; color: var(--text-dim); gap: 12px;
+  }
+  .empty-state .icon { font-size: 48px; }
+  /* ピッカーモード */
+  body.picker-mode .admin-nav,
+  body.picker-mode .header-actions .no-picker { display: none; }
+</style>
+</head>
+<body>
+
+<header class="admin-header">
+  <h1>アップロード管理</h1>
+  <div class="header-actions">
+    <span id="selectedInfo" style="font-size:13px;color:var(--text-dim)"></span>
+    <button class="btn btn-danger btn-sm" id="btnDelete" style="display:none" onclick="deleteSelected()">🗑 削除</button>
+    <label class="btn btn-primary no-picker" style="cursor:pointer">
+      ＋ アップロード
+      <input type="file" id="uploadInput" accept="image/*,application/pdf" multiple style="display:none">
+    </label>
+    <a href="<?= $adminUrl ?>/safetynotice_board_no1/index.php" class="btn btn-secondary no-picker">← 管理画面に戻る</a>
+  </div>
+</header>
+
+<nav class="admin-nav no-picker">
+  <a href="<?= $adminUrl ?>/safetynotice_board_no1/index.php">安全掲示板 No.1</a>
+  <a href="<?= $adminUrl ?>/uploads/index.php" class="active">アップロード管理</a>
+</nav>
+
+<!-- ツールバー -->
+<div class="upload-toolbar">
+  <div class="file-drop" id="dropZone" style="flex:1;padding:10px 16px;">
+    ここにファイルをドロップ（または上のボタンからアップロード）
+  </div>
+  <div id="uploadProgress" style="font-size:12px;color:var(--text-dim);min-width:100px;text-align:right"></div>
+</div>
+
+<!-- ファイル一覧 -->
+<div class="page-body">
+  <div class="upload-grid" id="uploadGrid"></div>
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<script src="../../assets/js/api.js"></script>
+<script>
+const BASE_URL = '<?= $baseUrl ?>';
+const isPicker = new URLSearchParams(location.search).get('mode') === 'picker';
+if (isPicker) document.body.classList.add('picker-mode');
+
+let files       = [];
+let selectedSet = new Set();
+
+// ---- 初期化 ----
+async function init() {
+  await loadFiles();
+  setupDrop();
+  document.getElementById('uploadInput').addEventListener('change', e => {
+    uploadFiles([...e.target.files]);
+    e.target.value = '';
+  });
+}
+
+async function loadFiles() {
+  try {
+    const data = await API.getUploads();
+    files = data.files || [];
+    renderGrid();
+  } catch(e) {
+    showToast('取得失敗: ' + e.message, true);
+  }
+}
+
+// ---- グリッド描画 ----
+function renderGrid() {
+  const grid = document.getElementById('uploadGrid');
+  if (!files.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="icon">📂</div>
+      <div>アップロードされたファイルはありません</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = files.map(f => {
+    const isImg = f.fileType.startsWith('image/');
+    const thumb = isImg
+      ? `<img src="${f.filePath}" alt="${esc(f.fileName)}" loading="lazy">`
+      : `<div class="pdf-icon">📄</div>`;
+    const size  = formatSize(f.fileSize);
+    const sel   = selectedSet.has(f.fileName) ? 'selected' : '';
+
+    return `
+      <div class="upload-card ${sel}" data-name="${esc(f.fileName)}" onclick="toggleSelect('${esc(f.fileName)}', event)">
+        <div class="upload-card-thumb">${thumb}</div>
+        <div class="upload-card-info">
+          <div class="upload-card-name" title="${esc(f.fileName)}">${esc(f.fileName)}</div>
+          <div class="upload-card-meta">${size}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ---- 選択 ----
+function toggleSelect(name, e) {
+  if (isPicker) {
+    const f = files.find(x => x.fileName === name);
+    if (f && window.opener && !window.opener.closed) {
+      window.opener.Admin.onPickFile(f.filePath, f.fileType, f.fileName);
+      window.close();
+    }
+    return;
+  }
+
+  if (selectedSet.has(name)) selectedSet.delete(name);
+  else                        selectedSet.add(name);
+  updateSelectionUI();
+  renderGrid();
+}
+
+function updateSelectionUI() {
+  const n    = selectedSet.size;
+  const info = document.getElementById('selectedInfo');
+  const btn  = document.getElementById('btnDelete');
+  info.textContent = n ? `${n} 件選択中` : '';
+  btn.style.display = n ? 'inline-flex' : 'none';
+}
+
+// ---- 削除 ----
+async function deleteSelected() {
+  if (!selectedSet.size) return;
+  if (!confirm(`選択した ${selectedSet.size} 件を削除しますか？\nこの操作は元に戻せません。`)) return;
+
+  let failed = 0;
+  for (const name of selectedSet) {
+    try {
+      await API.deleteUpload(name);
+    } catch(e) {
+      failed++;
+    }
+  }
+  selectedSet.clear();
+  updateSelectionUI();
+  await loadFiles();
+  showToast(failed ? `${failed} 件の削除に失敗しました` : '削除しました', failed > 0);
+}
+
+// ---- アップロード ----
+function setupDrop() {
+  const zone = document.getElementById('dropZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    uploadFiles([...e.dataTransfer.files]);
+  });
+}
+
+async function uploadFiles(fileList) {
+  const allowed = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+  const valid   = fileList.filter(f => allowed.includes(f.type));
+  if (!valid.length) {
+    showToast('対応形式: JPEG, PNG, GIF, WEBP, PDF', true);
+    return;
+  }
+
+  const prog = document.getElementById('uploadProgress');
+  let done = 0;
+  let failed = 0;
+
+  for (const file of valid) {
+    prog.textContent = `アップロード中 ${done+1}/${valid.length}...`;
+    try {
+      await API.uploadFile(file);
+      done++;
+    } catch(e) {
+      failed++;
+    }
+  }
+
+  prog.textContent = '';
+  await loadFiles();
+  showToast(
+    failed
+      ? `${done} 件成功 / ${failed} 件失敗`
+      : `${done} 件アップロードしました`,
+    failed > 0
+  );
+}
+
+// ---- ユーティリティ ----
+function formatSize(bytes) {
+  if (bytes >= 1024*1024) return (bytes/1024/1024).toFixed(1) + ' MB';
+  if (bytes >= 1024)      return (bytes/1024).toFixed(0) + ' KB';
+  return bytes + ' B';
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, isErr = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('toast-err', isErr);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+init();
+</script>
+</body>
+</html>

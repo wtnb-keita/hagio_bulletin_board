@@ -1,0 +1,123 @@
+/* ===================================================
+   ビュー画面専用スタイル（1800×900px 固定）
+   =================================================== */
+body {
+  background: #1a1a2e;
+  width: 1800px;
+  height: 900px;
+  overflow: hidden;
+}
+
+#board {
+  position: relative;
+  width: 1800px;
+  height: 900px;
+  background: #0f3460;
+}
+
+/* ---- パネル共通 ---- */
+.panel {
+  position: absolute;
+  background: #16213e;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.panel-title {
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 4px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+}
+.panel-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ---- メディアパネル ---- */
+.panel-media .panel-body img   { width: 100%; height: 100%; object-fit: contain; display: block; }
+.panel-media .panel-body iframe { width: 100%; height: 100%; border: none; background: #fff; }
+.panel-media .panel-label {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-size: 12px;
+  padding: 3px 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ---- テキストパネル ---- */
+.panel-text .panel-body {
+  padding: 8px;
+  color: #e0e0e0;
+  font-size: 14px;
+  overflow-y: auto;
+  writing-mode: var(--writing-mode, horizontal-tb);
+}
+
+/* ---- 無災害記録パネル ---- */
+.panel-accident {
+  background: #0d2137;
+  border-color: var(--accent2);
+}
+.panel-accident .panel-title { background: var(--accent2); color: #1a1a1a; }
+.panel-accident .panel-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  color: #fff;
+  gap: 6px;
+}
+.accident-target    { font-size: 13px; color: #aaa; }
+.accident-date      { font-size: 12px; color: #ccc; }
+.accident-days      { font-size: 52px; font-weight: bold; color: var(--accent2); line-height: 1; }
+.accident-days-label { font-size: 13px; color: var(--accent2); }
+.accident-progress  { width: 90%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+.accident-progress-bar { height: 100%; background: var(--accent2); border-radius: 4px; transition: width 0.5s; }
+
+/* ---- 告知パネル ---- */
+.panel-notice { border-color: var(--accent3); }
+.panel-notice .panel-title { background: var(--info, #0277bd); }
+.panel-notice .panel-body  { overflow-y: auto; padding: 4px; }
+.notice-item {
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  border-left: 4px solid #ccc;
+  background: rgba(255,255,255,0.05);
+  color: #e0e0e0;
+  font-size: 12px;
+}
+.notice-item.level-1 { border-left-color: var(--accent3); }
+.notice-item.level-2 { border-left-color: var(--accent2); }
+.notice-item.level-3 { border-left-color: var(--accent); }
+.notice-item-title  { font-weight: bold; font-size: 13px; margin-bottom: 3px; }
+.notice-item-period { font-size: 11px; color: #888; margin-bottom: 3px; }
+.notice-item-text   { font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+
+/* ---- 汎用 ---- */
+.no-data { color: #555; font-size: 13px; padding: 12px; text-align: center; }
+
+/* ---- 時計 ---- */
+#clock {
+  position: fixed;
+  top: 6px; right: 10px;
+  color: rgba(255,255,255,0.4);
+  font-size: 12px;
+  z-index: 999;
+}
