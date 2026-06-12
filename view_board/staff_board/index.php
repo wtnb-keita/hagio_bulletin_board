@@ -232,11 +232,16 @@ body {
 const BASE_URL  = '<?= $baseUrl ?>';
 const BOARD_KEY = 'staff_board';
 
-const COLS     = 5;
-const ROWS     = 2;
-const PER_PAGE = COLS * ROWS;
+/* カードの基準サイズ（1800×900・5列2行時の寸法。縦横比はこれで固定） */
+const BASE_CW = 346;
+const BASE_CH = 409;
+
+let COLS     = 5;
+let ROWS     = 2;
+let PER_PAGE = COLS * ROWS;
 
 let _pages    = [];
+let _staffCache = [];
 let _curSlide = 0;
 let _ssTimer  = null;
 let _boardCfg = { slideshow_enabled: false, slideshow_interval: 10 };
@@ -296,6 +301,7 @@ function buildCard(s) {
 
 /* ===== スライド描画 ===== */
 function renderSlides(list) {
+  _staffCache = list;
   const pageCount = Math.max(1, Math.ceil(list.length / PER_PAGE));
   if (_curSlide >= pageCount) _curSlide = 0;
 
@@ -310,18 +316,37 @@ function renderSlides(list) {
   ss.innerHTML = '';
   ss.style.height = slideH + 'px';
 
+  // 利用可能領域から、基準縦横比(BASE_CW:BASE_CH)を保ったままカードサイズを算出
+  const gap    = 10;
+  const availW = _boardW - 28 - gap * (COLS - 1);
+  const availH = slideH  - 20 - gap * (ROWS - 1);
+  const scale  = Math.min(availW / COLS / BASE_CW, availH / ROWS / BASE_CH);
+  const cardW  = BASE_CW * scale;
+  const cardH  = BASE_CH * scale;
+
   _pages.forEach((pageStaff, pi) => {
     const slide = document.createElement('div');
     slide.className = `staff-slide${pi === _curSlide ? ' active' : ''}`;
     slide.style.cssText = `
       height:${slideH}px;
-      grid-template-columns:repeat(${COLS},1fr);
-      grid-template-rows:repeat(${ROWS},1fr);
-      gap:10px;
+      grid-template-columns:repeat(${COLS},${cardW}px);
+      grid-template-rows:repeat(${ROWS},${cardH}px);
+      gap:${gap}px;
       padding:10px 14px;
+      justify-content:center;
+      align-content:center;
     `;
     for (let i = 0; i < PER_PAGE; i++) {
-      slide.appendChild(pageStaff[i] ? buildCard(pageStaff[i]) : Object.assign(document.createElement('div'), { className: 'card card-empty' }));
+      const cell = document.createElement('div');
+      cell.style.cssText = `width:${cardW}px;height:${cardH}px;position:relative;`;
+      if (pageStaff[i]) {
+        const card = buildCard(pageStaff[i]);
+        card.style.cssText = `width:${BASE_CW}px;height:${BASE_CH}px;transform:scale(${scale});transform-origin:top left;`;
+        cell.appendChild(card);
+      } else {
+        cell.className = 'card-empty';
+      }
+      slide.appendChild(cell);
     }
     ss.appendChild(slide);
   });
@@ -374,9 +399,20 @@ async function loadConfig() {
     _boardCfg = cfg;
     _boardW   = cfg.width  || 1800;
     _boardH   = cfg.height || 900;
+    COLS      = Math.max(1, parseInt(cfg.grid_cols) || 5);
+    ROWS      = Math.max(1, parseInt(cfg.grid_rows) || 2);
+    PER_PAGE  = COLS * ROWS;
     if (cfg.name) document.getElementById('title').textContent = cfg.name;
     applyScale();
   } catch(e) {}
+}
+
+/* 設定変更（レイアウト等）の監視 */
+async function checkConfigUpdate() {
+  const prev = `${_boardW}x${_boardH}:${COLS}x${ROWS}:${_boardCfg.slideshow_enabled}:${_boardCfg.slideshow_interval}`;
+  await loadConfig();
+  const now  = `${_boardW}x${_boardH}:${COLS}x${ROWS}:${_boardCfg.slideshow_enabled}:${_boardCfg.slideshow_interval}`;
+  if (prev !== now) renderSlides(_staffCache);
 }
 
 /* ===== 時計 ===== */
@@ -407,6 +443,7 @@ window.addEventListener('resize', applyScale);
   }
   await checkUpdate();
   setInterval(checkUpdate, 3000);
+  setInterval(checkConfigUpdate, 5000);
 })();
 </script>
 </body>

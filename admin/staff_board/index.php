@@ -87,6 +87,8 @@ $staffJson = json_encode($staffList, JSON_UNESCAPED_UNICODE);
 }
 .staff-card:hover         { border-color: var(--accent); }
 .staff-card.is-selected   { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(233,69,96,.25); }
+.staff-card.is-dragging   { opacity: .4; }
+.staff-card.drag-over     { border-color: #4caf50; box-shadow: 0 0 0 3px rgba(76,175,80,.35); }
 .staff-card-thumb {
   height: 120px;
   background: var(--surface);
@@ -224,6 +226,92 @@ $staffJson = json_encode($staffList, JSON_UNESCAPED_UNICODE);
 }
 .lib-item:hover       { border-color: var(--accent); }
 .lib-item img         { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+
+/* ===== レイアウトプレビュー（view画面のカードを忠実に再現） ===== */
+#pvBoard {
+  background: #e8edf3;
+  transform-origin: top left;
+  overflow: hidden;
+  font-family: 'Meiryo', 'Yu Gothic', sans-serif;
+}
+#pvHeader {
+  height: 52px; background: #1a4f72; border-bottom: 4px solid #e94560;
+  display: flex; align-items: center; justify-content: center; padding: 0 24px; gap: 10px;
+}
+#pvHeader .pv-cross { position: relative; width: 28px; height: 28px; flex-shrink: 0; }
+#pvHeader .pv-cross::before, #pvHeader .pv-cross::after { content: ''; position: absolute; background: #2ecc40; border-radius: 2px; }
+#pvHeader .pv-cross::before { width: 34%; height: 100%; left: 33%; top: 0; }
+#pvHeader .pv-cross::after  { width: 100%; height: 34%; left: 0; top: 33%; }
+#pvHeader h1 { font-size: 24px; font-weight: bold; color: #fff; letter-spacing: .06em; }
+
+#pvSlideshow .staff-slide { display: none; }
+#pvSlideshow .staff-slide.active { display: grid; }
+#pvSlideshow .card {
+  background: #fff; border: 3px solid #f5c518; border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+#pvSlideshow .card-empty { background: rgba(255,255,255,.35); border: 1px dashed #b8cfe0; border-radius: 12px; }
+#pvSlideshow .card-top { display: flex; gap: 10px; padding: 12px; border-bottom: 1px solid #eee; background: #fffde7; min-height: 130px; }
+#pvSlideshow .card-photo { width: 100px; height: 100px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: #d0e0ef; }
+#pvSlideshow .card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#pvSlideshow .card-photo-none { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 36px; color: #8aaec8; }
+#pvSlideshow .card-top-info { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; }
+#pvSlideshow .badge-anzen { align-self: center; display: flex; align-items: center; gap: 8px; color: #2e7d32; font-size: 20px; font-weight: bold; white-space: nowrap; }
+#pvSlideshow .safety-cross { position: relative; width: 32px; height: 32px; flex-shrink: 0; }
+#pvSlideshow .safety-cross::before, #pvSlideshow .safety-cross::after { content: ''; position: absolute; background: #2ecc40; border-radius: 2px; }
+#pvSlideshow .safety-cross::before { width: 34%; height: 100%; left: 33%; top: 0; }
+#pvSlideshow .safety-cross::after  { width: 100%; height: 34%; left: 0; top: 33%; }
+#pvSlideshow .card-body { flex: 1; display: flex; flex-direction: column; padding: 8px 10px 6px; min-height: 0; }
+#pvSlideshow .card-basic-info { display: flex; flex-direction: column; margin-bottom: 6px; flex-shrink: 0; }
+#pvSlideshow .card-basic-info > div { display: flex; gap: 20px; }
+#pvSlideshow .card-basic-info > div:first-child { margin-bottom: 4px; }
+#pvSlideshow .card-basic-info > div:first-child .card-info-label { flex: 1; }
+#pvSlideshow .card-basic-info > div:first-child .card-info-label:last-child { flex: 0 0 auto; }
+#pvSlideshow .card-basic-info > div:last-child .card-name { flex: 1; }
+#pvSlideshow .card-basic-info > div:last-child .card-blood { flex: 0 0 auto; }
+#pvSlideshow .card-info-label { font-size: 10px; color: #666; margin-bottom: 1px; }
+#pvSlideshow .card-name { font-size: 18px; font-weight: 700; color: #1a2e40; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#pvSlideshow .card-blood { font-size: 16px; font-weight: 700; color: #c62828; margin-left: auto; white-space: nowrap; }
+#pvSlideshow .card-job-type { margin-top: 16px; font-size: 16px; font-weight: 600; color: #1a4f72; background: #dceeff; border-radius: 4px; padding: 4px 12px; white-space: nowrap; }
+#pvSlideshow .card-qual-label { font-size: 13px; font-weight: 700; margin-bottom: 6px; flex-shrink: 0; }
+#pvSlideshow .card-quals { flex: 1; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; overflow: hidden; }
+#pvSlideshow .qual { padding: 4px 10px; border-radius: 20px; background: #eef6ff; border: 1px solid #c5daf7; color: #1a4f72; font-size: 13px; white-space: nowrap; line-height: 1.5; }
+
+/* プレビュー内のドラッグ用セル */
+#pvSlideshow .pv-cell { position: relative; cursor: grab; }
+#pvSlideshow .pv-cell.is-dragging { opacity: .35; }
+#pvSlideshow .pv-cell.drag-over::after {
+  content: ''; position: absolute; inset: 0; border: 4px solid #4caf50;
+  border-radius: 12px; pointer-events: none; box-shadow: 0 0 0 3px rgba(76,175,80,.3);
+}
+#pvSlideshow .card-empty.drag-over {
+  border: 4px solid #4caf50; background: rgba(76,175,80,.15);
+  box-shadow: 0 0 0 3px rgba(76,175,80,.3);
+}
+.pv-dot {
+  min-width: 30px; height: 24px; padding: 0 8px; border-radius: 12px;
+  background: rgba(180,180,180,.5); border: 2px solid var(--border);
+  color: #fff; font-size: 12px; font-weight: bold; cursor: pointer;
+  transition: transform .12s, background .12s;
+}
+.pv-dot.active { background: var(--accent); border-color: var(--accent); }
+.pv-dot-hover  { background: #4caf50; border-color: #4caf50; transform: scale(1.18); }
+
+/* ドラッグ中のページ送りエッジ（画面端の当たり判定） */
+.pv-edge {
+  position: absolute; top: 0; bottom: 0; width: 72px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 44px; color: #fff; font-weight: bold;
+  opacity: 0; pointer-events: none; z-index: 20;
+  cursor: pointer; user-select: none;
+  transition: opacity .15s, background .15s;
+}
+.pv-edge-l { left: 0;  background: linear-gradient(to right, rgba(76,175,80,.55), rgba(76,175,80,0)); }
+.pv-edge-r { right: 0; background: linear-gradient(to left,  rgba(76,175,80,.55), rgba(76,175,80,0)); }
+#pvStage.pv-dragging .pv-edge:not(.pv-edge-disabled) { opacity: .9; pointer-events: auto; }
+.pv-edge.pv-edge-active { opacity: 1 !important; }
+.pv-edge-l.pv-edge-active { background: linear-gradient(to right, rgba(76,175,80,.95), rgba(76,175,80,.1)); }
+.pv-edge-r.pv-edge-active { background: linear-gradient(to left,  rgba(76,175,80,.95), rgba(76,175,80,.1)); }
 </style>
 </head>
 <body>
@@ -240,6 +328,7 @@ $staffJson = json_encode($staffList, JSON_UNESCAPED_UNICODE);
   </button>
   <div class="header-actions">
     <button class="btn btn-secondary" onclick="openMasterSettings()">📋 マスター設定</button>
+    <button class="btn btn-secondary" onclick="openLayoutPreview()">🔲 レイアウト編集</button>
     <button class="btn btn-secondary" onclick="openSlideSettings()">🖼 スライドショー設定</button>
     <button class="btn btn-accent2" onclick="openView()">🖥 ビュー画面を開く</button>
     <button class="btn btn-success"  onclick="saveAll()">💾 保存</button>
@@ -307,9 +396,25 @@ $staffJson = json_encode($staffList, JSON_UNESCAPED_UNICODE);
       </div>
     </div>
     <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+    <p style="font-size:12px;font-weight:bold;margin-bottom:10px;color:var(--text);">🔲 レイアウト設定</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>列数</label>
+        <input type="number" id="ss_cols" value="5" min="1" max="12" step="1">
+      </div>
+      <div class="form-group">
+        <label>行数</label>
+        <input type="number" id="ss_rows" value="2" min="1" max="8" step="1">
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">
+      カードの縦横比は維持されたまま、列×行に合わせて拡大縮小されます。
+    </p>
+    </div>
+    <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
     <p style="font-size:12px;font-weight:bold;margin-bottom:10px;color:var(--text);">🖼 スライドショー設定</p>
     <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">
-      スタッフ数が12人を超えると自動的に複数ページ（12人/ページ）に分かれます。
+      スタッフ数が「列数×行数」を超えると自動的に複数ページに分かれます。
     </p>
     <div style="margin-bottom:12px">
       <button id="ss_enabled"
@@ -333,6 +438,58 @@ $staffJson = json_encode($staffList, JSON_UNESCAPED_UNICODE);
     <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
       <button class="btn btn-secondary" onclick="closeSlideSettings()">キャンセル</button>
       <button class="btn btn-success" onclick="saveSlideSettings()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== レイアウトプレビューモーダル ===== -->
+<div class="modal-overlay" id="previewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;">
+  <div class="modal" style="width:min(94vw,1100px);max-height:94vh;display:flex;flex-direction:column;background:var(--surface);border-radius:8px;padding:18px;">
+    <div class="modal-header" style="display:flex;align-items:center;margin-bottom:12px;">
+      <h2>🔲 レイアウトプレビュー</h2>
+      <span style="font-size:12px;color:var(--text-dim);margin-left:12px;">ビュー画面と同じ表示です。カードはドラッグで並び替え（ドラッグ中に左右の端 ◁ ▷ へ寄せるとページ移動）できます。</span>
+      <button class="btn btn-secondary btn-sm" onclick="closeLayoutPreview()" style="margin-left:auto">✕ 閉じる</button>
+    </div>
+
+    <!-- コントロール -->
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:20px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13px;color:var(--text);font-weight:bold;">列数</span>
+        <button class="btn btn-secondary btn-sm" onclick="pvStep('cols',-1)">−</button>
+        <span id="pvColsLabel" style="min-width:28px;text-align:center;font-size:16px;font-weight:bold;color:var(--text);">5</span>
+        <button class="btn btn-secondary btn-sm" onclick="pvStep('cols',1)">＋</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13px;color:var(--text);font-weight:bold;">行数</span>
+        <button class="btn btn-secondary btn-sm" onclick="pvStep('rows',-1)">−</button>
+        <span id="pvRowsLabel" style="min-width:28px;text-align:center;font-size:16px;font-weight:bold;color:var(--text);">2</span>
+        <button class="btn btn-secondary btn-sm" onclick="pvStep('rows',1)">＋</button>
+      </div>
+      <span id="pvInfo" style="font-size:12px;color:var(--text-dim);"></span>
+    </div>
+
+    <!-- プレビュー領域 -->
+    <div id="pvStage" style="position:relative;flex:1;overflow:auto;background:#111;border-radius:6px;display:flex;align-items:center;justify-content:center;padding:16px;min-height:0;">
+      <div id="pvViewport" style="position:relative;">
+        <div id="pvBoard">
+          <div id="pvHeader">
+            <span class="pv-cross"></span>
+            <h1 id="pvTitle">安全資格者掲示板</h1>
+          </div>
+          <div id="pvSlideshow"></div>
+        </div>
+      </div>
+      <!-- ドラッグ中だけ表示されるページ送りエッジ -->
+      <div id="pvEdgeL" class="pv-edge pv-edge-l">◁</div>
+      <div id="pvEdgeR" class="pv-edge pv-edge-r">▷</div>
+    </div>
+
+    <!-- ページナビ -->
+    <div id="pvNav" style="display:flex;justify-content:center;gap:8px;margin-top:10px;min-height:14px;"></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
+      <button class="btn btn-secondary" onclick="closeLayoutPreview()">キャンセル</button>
+      <button class="btn btn-success" onclick="savePreviewLayout()">💾 この設定で保存</button>
     </div>
   </div>
 </div>
@@ -425,6 +582,30 @@ function renderGrid() {
     card.className = 'staff-card' + (i === selectedIdx ? ' is-selected' : '');
     card.addEventListener('click', () => selectStaff(i));
 
+    // ドラッグ&ドロップで並び替え
+    card.draggable = true;
+    card.addEventListener('dragstart', e => {
+      _dragIdx = i;
+      card.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      _dragIdx = null;
+      document.querySelectorAll('.staff-card').forEach(c => c.classList.remove('is-dragging', 'drag-over'));
+    });
+    card.addEventListener('dragover', e => {
+      if (_dragIdx === null || _dragIdx === i) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      if (_dragIdx === null || _dragIdx === i) return;
+      moveStaff(_dragIdx, i);
+    });
+
     const thumb = s.photoPath
       ? `<img src="${eh(s.photoPath)}" alt="">`
       : `<div class="icon">👤</div>`;
@@ -445,6 +626,20 @@ function renderGrid() {
   add.innerHTML = '<span style="font-size:28px;">＋</span><span>スタッフを追加</span>';
   add.addEventListener('click', addStaff);
   grid.appendChild(add);
+}
+
+/* ===== 並び替え ===== */
+let _dragIdx = null;
+
+async function moveStaff(from, to) {
+  flushEditor();
+  const sel = selectedIdx !== null ? staffList[selectedIdx] : null;
+  const [moved] = staffList.splice(from, 1);
+  staffList.splice(to, 0, moved);
+  if (sel) selectedIdx = staffList.indexOf(sel);
+  renderGrid();
+  renderEditor();
+  await saveAll(true, '並び順を保存しました ✔');
 }
 
 /* ===== スタッフ選択 ===== */
@@ -676,7 +871,7 @@ async function doDelete(idx) {
 }
 
 /* ===== 保存 ===== */
-async function saveAll(silent = false) {
+async function saveAll(silent = false, silentMsg = '削除しました') {
   if (!silent) flushEditor();
   const valid = staffList.filter(s => s.name.trim() !== '');
   try {
@@ -691,7 +886,7 @@ async function saveAll(silent = false) {
       if (selectedIdx !== null && selectedIdx >= staffList.length) selectedIdx = null;
       renderGrid();
       if (silent) {
-        toast('削除しました');
+        toast(silentMsg);
       } else {
         toast('保存しました ✔');
         const btn = document.querySelector('.admin-header .btn-success');
@@ -707,6 +902,309 @@ async function saveAll(silent = false) {
     }
   } catch(e) {
     toast('通信エラー: ' + e.message, true);
+  }
+}
+
+/* ===== レイアウトプレビュー ===== */
+/* view画面と同じ基準寸法（縦横比固定の基準） */
+const PV_BASE_CW = 346;
+const PV_BASE_CH = 409;
+
+let pvCols    = 5;
+let pvRows    = 2;
+let pvCurPage = 0;
+let _pvDragIdx = null;
+let _pvPageCount = 1;
+let _pvEdgeTimer = null;   // 画面端ホバー中の連続ページ送りタイマー
+let _pvEdgeDir   = 0;      // -1:前ページ / +1:次ページ
+let _pvEdgeBound = false;
+
+/* ドラッグ中、画面端のエッジに重ねたら一定間隔でページ送り */
+function pvSetupEdgeDnD() {
+  if (_pvEdgeBound) return;
+  _pvEdgeBound = true;
+  const bind = (id, dir) => {
+    const edge = document.getElementById(id);
+    edge.addEventListener('dragover', e => {
+      if (_pvDragIdx === null) return;
+      const target = pvCurPage + dir;
+      if (target < 0 || target >= _pvPageCount) { pvClearEdge(); return; }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (_pvEdgeDir === dir && _pvEdgeTimer) return;  // 既に同方向で稼働中
+      pvClearEdge();
+      _pvEdgeDir = dir;
+      edge.classList.add('pv-edge-active');
+      _pvEdgeTimer = setInterval(() => {
+        const next = pvCurPage + _pvEdgeDir;
+        if (next < 0 || next >= _pvPageCount) { pvClearEdge(); return; }
+        pvGoPage(next);  // 再描画してもエッジ要素・_pvDragIdx は保持される
+      }, 650);
+    });
+    edge.addEventListener('dragleave', () => pvClearEdge());
+  };
+  bind('pvEdgeL', -1);
+  bind('pvEdgeR', +1);
+}
+
+function pvClearEdge() {
+  if (_pvEdgeTimer) { clearInterval(_pvEdgeTimer); _pvEdgeTimer = null; }
+  _pvEdgeDir = 0;
+  document.querySelectorAll('.pv-edge.pv-edge-active').forEach(el => el.classList.remove('pv-edge-active'));
+}
+
+/* view画面の buildCard と同等のカード生成 */
+function pvBuildCard(s) {
+  const photoHtml = s.photoPath
+    ? `<img src="${eh(s.photoPath)}" alt="${eh(s.name)}">`
+    : `<div class="card-photo-none">👤</div>`;
+  const quals = (s.qualifications || []).filter(q => (q || '').trim() !== '')
+    .map(q => `<span class="qual">${eh(q)}</span>`).join('');
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="card-yellow-corner">
+      <div class="card-top">
+        <div class="card-photo">${photoHtml}</div>
+        <div class="card-top-info">
+          <div class="badge-anzen"><div class="safety-cross"></div>安全第一</div>
+          ${s.jobType ? `<div class="card-job-type">職種：${eh(s.jobType)}</div>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-basic-info">
+        <div>
+          <div class="card-info-label">名前</div>
+          ${s.department ? `<div class="card-info-label">血液型</div>` : ''}
+        </div>
+        <div>
+          <div class="card-name">${eh(s.name)}</div>
+          ${s.department ? `<div class="card-blood">${eh(s.department)}</div>` : ''}
+        </div>
+      </div>
+      ${quals ? `<div class="card-qual-label">保有資格</div><div class="card-quals">${quals}</div>` : ''}
+    </div>`;
+  return card;
+}
+
+function openLayoutPreview() {
+  flushEditor();
+  pvCols = Math.min(12, Math.max(1, parseInt(_boardCfg.grid_cols) || 5));
+  pvRows = Math.min(8,  Math.max(1, parseInt(_boardCfg.grid_rows) || 2));
+  pvCurPage = 0;
+  if (_boardCfg.name) document.getElementById('pvTitle').textContent = _boardCfg.name;
+  document.getElementById('previewModal').style.display = 'flex';
+  pvSetupEdgeDnD();
+  // モーダル表示後にステージ寸法が確定するので次フレームで描画
+  requestAnimationFrame(pvRender);
+}
+
+function closeLayoutPreview() {
+  document.getElementById('previewModal').style.display = 'none';
+}
+
+function pvStep(which, delta) {
+  if (which === 'cols') pvCols = Math.min(12, Math.max(1, pvCols + delta));
+  else                  pvRows = Math.min(8,  Math.max(1, pvRows + delta));
+  pvCurPage = 0;
+  pvRender();
+}
+
+function pvRender() {
+  const boardW  = _boardCfg.width  || 1800;
+  const boardH  = _boardCfg.height || 900;
+  const perPage = pvCols * pvRows;
+
+  const valid = staffList.filter(s => (s.name || '').trim() !== '');
+  const pageCount = Math.max(1, Math.ceil(valid.length / perPage));
+  if (pvCurPage >= pageCount) pvCurPage = 0;
+
+  document.getElementById('pvColsLabel').textContent = pvCols;
+  document.getElementById('pvRowsLabel').textContent = pvRows;
+  document.getElementById('pvInfo').textContent =
+    `${valid.length}人 / 1ページ${perPage}枠 / 全${pageCount}ページ`;
+
+  // ボード本体を実寸で組み、ステージに収まるよう全体を縮小表示
+  const board = document.getElementById('pvBoard');
+  board.style.width  = boardW + 'px';
+  board.style.height = boardH + 'px';
+
+  const ss     = document.getElementById('pvSlideshow');
+  const slideH = boardH - 52;
+  ss.style.height = slideH + 'px';
+  ss.innerHTML = '';
+
+  // 縦横比固定でカードサイズを算出（view画面と同じロジック）
+  const gap    = 10;
+  const availW = boardW - 28 - gap * (pvCols - 1);
+  const availH = slideH  - 20 - gap * (pvRows - 1);
+  const scale  = Math.min(availW / pvCols / PV_BASE_CW, availH / pvRows / PV_BASE_CH);
+  const cardW  = PV_BASE_CW * scale;
+  const cardH  = PV_BASE_CH * scale;
+
+  const pages = [];
+  for (let i = 0; i < valid.length; i += perPage) pages.push(valid.slice(i, i + perPage));
+  if (pages.length === 0) pages.push([]);
+
+  pages.forEach((pageStaff, pi) => {
+    const slide = document.createElement('div');
+    slide.className = `staff-slide${pi === pvCurPage ? ' active' : ''}`;
+    slide.style.cssText = `
+      height:${slideH}px;
+      grid-template-columns:repeat(${pvCols},${cardW}px);
+      grid-template-rows:repeat(${pvRows},${cardH}px);
+      gap:${gap}px; padding:10px 14px;
+      justify-content:center; align-content:center;
+    `;
+    for (let i = 0; i < perPage; i++) {
+      const cell = document.createElement('div');
+      cell.style.cssText = `width:${cardW}px;height:${cardH}px;`;
+      const member = pageStaff[i];
+      if (member) {
+        cell.className = 'pv-cell';
+        const globalIdx = staffList.indexOf(member);
+        cell.dataset.idx = globalIdx;
+        cell.draggable = true;
+        const card = pvBuildCard(member);
+        card.style.cssText = `width:${PV_BASE_CW}px;height:${PV_BASE_CH}px;transform:scale(${scale});transform-origin:top left;`;
+        cell.appendChild(card);
+        pvAttachDrag(cell, globalIdx);
+      } else {
+        cell.className = 'card-empty';
+        pvAttachEmptyDrop(cell, pi);
+      }
+      slide.appendChild(cell);
+    }
+    ss.appendChild(slide);
+  });
+
+  // ステージに収まる表示倍率
+  const stage = document.getElementById('pvStage');
+  const dispScale = Math.min(
+    (stage.clientWidth  - 32) / boardW,
+    (stage.clientHeight - 32) / boardH,
+    1
+  );
+  board.style.transform = `scale(${dispScale})`;
+  const vp = document.getElementById('pvViewport');
+  vp.style.width  = (boardW * dispScale) + 'px';
+  vp.style.height = (boardH * dispScale) + 'px';
+
+  // ページナビ（クリックでも移動できるインジケーター）
+  const nav = document.getElementById('pvNav');
+  if (pages.length <= 1) {
+    nav.innerHTML = '';
+  } else {
+    nav.innerHTML = pages.map((_, i) =>
+      `<button class="pv-dot${i === pvCurPage ? ' active' : ''}" data-page="${i}" onclick="pvGoPage(${i})">${i + 1}</button>`
+    ).join('');
+  }
+
+  // ページ送りエッジの有効/無効（端のページでは方向を消す）
+  _pvPageCount = pages.length;
+  document.getElementById('pvEdgeL').classList.toggle('pv-edge-disabled', pvCurPage <= 0);
+  document.getElementById('pvEdgeR').classList.toggle('pv-edge-disabled', pvCurPage >= pages.length - 1);
+}
+
+function pvGoPage(idx) {
+  pvCurPage = idx;
+  pvRender();
+}
+
+function pvAttachDrag(cell, idx) {
+  cell.addEventListener('dragstart', e => {
+    _pvDragIdx = idx;
+    cell.classList.add('is-dragging');
+    document.getElementById('pvStage').classList.add('pv-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  cell.addEventListener('dragend', () => {
+    _pvDragIdx = null;
+    pvClearEdge();
+    document.getElementById('pvStage').classList.remove('pv-dragging');
+    document.querySelectorAll('#pvSlideshow .pv-cell').forEach(c => c.classList.remove('is-dragging', 'drag-over'));
+  });
+  cell.addEventListener('dragover', e => {
+    if (_pvDragIdx === null || _pvDragIdx === idx) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    cell.classList.add('drag-over');
+  });
+  cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+  cell.addEventListener('drop', e => {
+    e.preventDefault();
+    if (_pvDragIdx === null || _pvDragIdx === idx) return;
+    const from = _pvDragIdx;
+    const sel = selectedIdx !== null ? staffList[selectedIdx] : null;
+    const [moved] = staffList.splice(from, 1);
+    staffList.splice(idx, 0, moved);
+    if (sel) selectedIdx = staffList.indexOf(sel);
+    renderGrid();
+    pvRender();
+  });
+}
+
+/* 空き枠へのドロップ＝そのページの末尾へ移動 */
+function pvAttachEmptyDrop(cell, page) {
+  cell.addEventListener('dragover', e => {
+    if (_pvDragIdx === null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    cell.classList.add('drag-over');
+  });
+  cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+  cell.addEventListener('drop', e => {
+    e.preventDefault();
+    cell.classList.remove('drag-over');
+    if (_pvDragIdx === null) return;
+    pvMoveToPageEnd(_pvDragIdx, page);
+  });
+}
+
+function pvMoveToPageEnd(from, page) {
+  const sel     = selectedIdx !== null ? staffList[selectedIdx] : null;
+  const moved   = staffList[from];
+  const perPage = pvCols * pvRows;
+  const valid   = staffList.filter(s => (s.name || '').trim() !== '');
+  const members = valid.slice(page * perPage, page * perPage + perPage);
+  // このページの「動かす対象以外」の最後のカードをアンカーにして、その直後へ挿入
+  let anchor = null;
+  for (let k = members.length - 1; k >= 0; k--) {
+    if (members[k] !== moved) { anchor = members[k]; break; }
+  }
+  staffList.splice(from, 1);
+  if (anchor) {
+    staffList.splice(staffList.indexOf(anchor) + 1, 0, moved);
+  } else {
+    staffList.push(moved);
+  }
+  if (sel) selectedIdx = staffList.indexOf(sel);
+  renderGrid();
+  pvRender();
+}
+
+async function savePreviewLayout() {
+  // レイアウト設定を保存
+  const name     = _boardCfg.name   || '安全資格者掲示板';
+  const width    = _boardCfg.width  || 1800;
+  const height   = _boardCfg.height || 900;
+  const enabled  = !!_boardCfg.slideshow_enabled;
+  const interval = _boardCfg.slideshow_interval || 10;
+  try {
+    await fetch(`${BASE_URL}/api/boards.php?board=${BOARD_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, width, height, slideshow_enabled: enabled,
+                             slideshow_interval: interval, grid_cols: pvCols, grid_rows: pvRows }),
+    });
+    _boardCfg.grid_cols = pvCols;
+    _boardCfg.grid_rows = pvRows;
+    // 並び替えも保存
+    await saveAll(true, 'レイアウトと並び順を保存しました ✔');
+    closeLayoutPreview();
+  } catch(e) {
+    toast('保存失敗: ' + e.message, true);
   }
 }
 
@@ -736,6 +1234,8 @@ async function loadBoardCfg() {
     _boardCfg = cfg;
     _setSsBtn(!!cfg.slideshow_enabled);
     document.getElementById('ss_interval').value = cfg.slideshow_interval || 10;
+    document.getElementById('ss_cols').value     = cfg.grid_cols || 5;
+    document.getElementById('ss_rows').value     = cfg.grid_rows || 2;
   } catch(e) {}
 }
 
@@ -745,6 +1245,8 @@ function openSlideSettings() {
   document.getElementById('ss_height').value   = _boardCfg.height || 900;
   _setSsBtn(!!_boardCfg.slideshow_enabled);
   document.getElementById('ss_interval').value = _boardCfg.slideshow_interval || 10;
+  document.getElementById('ss_cols').value     = _boardCfg.grid_cols || 5;
+  document.getElementById('ss_rows').value     = _boardCfg.grid_rows || 2;
   const m = document.getElementById('slideModal');
   m.style.display = 'flex';
 }
@@ -759,17 +1261,22 @@ async function saveSlideSettings() {
   const height   = parseInt(document.getElementById('ss_height').value)   || 900;
   const enabled  = document.getElementById('ss_enabled').dataset.enabled === '1';
   const interval = parseInt(document.getElementById('ss_interval').value) || 10;
+  const cols     = Math.min(12, Math.max(1, parseInt(document.getElementById('ss_cols').value) || 5));
+  const rows     = Math.min(8,  Math.max(1, parseInt(document.getElementById('ss_rows').value) || 2));
   try {
     await fetch(`${BASE_URL}/api/boards.php?board=${BOARD_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, width, height, slideshow_enabled: enabled, slideshow_interval: interval }),
+      body: JSON.stringify({ name, width, height, slideshow_enabled: enabled, slideshow_interval: interval,
+                             grid_cols: cols, grid_rows: rows }),
     });
     _boardCfg.name               = name;
     _boardCfg.width              = width;
     _boardCfg.height             = height;
     _boardCfg.slideshow_enabled  = enabled;
     _boardCfg.slideshow_interval = interval;
+    _boardCfg.grid_cols          = cols;
+    _boardCfg.grid_rows          = rows;
     closeSlideSettings();
     toast('設定を保存しました');
   } catch(e) {
@@ -882,6 +1389,11 @@ async function saveMasterSettings() {
     toast('保存失敗: ' + e.message, true);
   }
 }
+
+/* プレビュー表示中はウィンドウリサイズで再フィット */
+window.addEventListener('resize', () => {
+  if (document.getElementById('previewModal').style.display === 'flex') pvRender();
+});
 
 /* ===== 初期描画 ===== */
 loadBoardCfg();

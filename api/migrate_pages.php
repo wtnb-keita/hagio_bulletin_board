@@ -48,6 +48,18 @@ tryAlter($pdo,
     'boards.slideshow_interval', $results
 );
 
+// boards.grid_cols
+tryAlter($pdo,
+    'ALTER TABLE boards ADD COLUMN grid_cols INT NOT NULL DEFAULT 5',
+    'boards.grid_cols', $results
+);
+
+// boards.grid_rows
+tryAlter($pdo,
+    'ALTER TABLE boards ADD COLUMN grid_rows INT NOT NULL DEFAULT 2',
+    'boards.grid_rows', $results
+);
+
 // panel_accident.initial_days
 tryAlter($pdo,
     'ALTER TABLE panel_accident ADD COLUMN initial_days INT NOT NULL DEFAULT 0',
