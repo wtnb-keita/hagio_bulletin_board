@@ -63,5 +63,19 @@ const API = (() => {
         body: JSON.stringify(settings),
       });
     },
+
+    /** ページ一覧取得 */
+    getPages(boardKey = BOARD_KEY) {
+      return request(`${BASE}/pages.php?board=${boardKey}`);
+    },
+
+    /** ページ一括保存 */
+    savePages(pages, boardKey = BOARD_KEY) {
+      return request(`${BASE}/pages.php?board=${boardKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pages }),
+      });
+    },
   };
 })();

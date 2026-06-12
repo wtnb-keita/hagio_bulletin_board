@@ -24,6 +24,7 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
 }
 .panel-title {
   background: var(--accent);
@@ -66,6 +67,8 @@ body {
   font-size: 14px;
   overflow-y: auto;
   writing-mode: var(--writing-mode, horizontal-tb);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 /* ---- 無災害記録パネル ---- */
@@ -79,16 +82,73 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 10px 14px;
   color: #fff;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ヘッダー行: 無災害 ＋ 記録表 */
+.accident-header {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: clamp(18px, 3.5cqw, 36px);
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+.accident-header-text { color: #fff; }
+.accident-plus {
+  color: #4caf50;
+  font-size: 1.2em;
+  line-height: 1;
+}
+
+/* テーブル部分 */
+.accident-table {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
-.accident-target    { font-size: 13px; color: #aaa; }
-.accident-date      { font-size: 12px; color: #ccc; }
-.accident-days      { font-size: 52px; font-weight: bold; color: var(--accent2); line-height: 1; }
-.accident-days-label { font-size: 13px; color: var(--accent2); }
-.accident-progress  { width: 90%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
-.accident-progress-bar { height: 100%; background: var(--accent2); border-radius: 4px; transition: width 0.5s; }
+.accident-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  border-left: 4px solid rgba(255,255,255,0.2);
+}
+.accent-row {
+  background: rgba(76,175,80,0.12);
+  border-left-color: #4caf50;
+}
+.accident-row-label {
+  font-size: clamp(13px, 2.2cqw, 22px);
+  color: #ccc;
+  white-space: nowrap;
+}
+.accent-row .accident-row-label {
+  color: #a5d6a7;
+  font-weight: bold;
+}
+.accident-row-value {
+  font-size: clamp(18px, 3.2cqw, 32px);
+  font-weight: bold;
+  color: #fff;
+  text-align: right;
+  white-space: nowrap;
+}
+.accident-row-value.accent { color: #4caf50; }
+.accident-unit {
+  font-size: 0.6em;
+  font-weight: normal;
+  margin-left: 2px;
+  color: inherit;
+  opacity: 0.8;
+}
 
 /* ---- 告知パネル ---- */
 .panel-notice { border-color: var(--accent3); }

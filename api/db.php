@@ -48,6 +48,28 @@ function errorResponse(string $msg, int $status = 400): void {
 }
 
 /**
+ * 指定ボードのページ一覧を配列で返す（管理画面PHP用）
+ */
+function fetchPages(string $boardKey): array {
+    try {
+        $pdo  = getPDO();
+        $stmt = $pdo->prepare(
+            'SELECT page_number, page_name, sort_order FROM board_pages WHERE board_key = ? ORDER BY sort_order, page_number'
+        );
+        $stmt->execute([$boardKey]);
+        $rows = $stmt->fetchAll();
+        if (!empty($rows)) {
+            return array_map(fn($r) => [
+                'page_number' => (int)$r['page_number'],
+                'page_name'   => $r['page_name'],
+                'sort_order'  => (int)$r['sort_order'],
+            ], $rows);
+        }
+    } catch (Throwable $e) { /* 未マイグレーション時は fallback */ }
+    return [['page_number' => 1, 'page_name' => 'ページ 1', 'sort_order' => 0]];
+}
+
+/**
  * 指定ボードのパネル一覧を配列で返す（管理画面PHP用）
  */
 function fetchPanels(string $boardKey): array {
@@ -71,6 +93,7 @@ function fetchPanels(string $boardKey): array {
             'y'       => (int)$row['pos_y'],
             'width'   => (int)$row['width'],
             'height'  => (int)$row['height'],
+            'page'    => isset($row['page_number']) ? (int)$row['page_number'] : 1,
             'content' => [],
         ];
 
@@ -103,9 +126,10 @@ function fetchPanels(string $boardKey): array {
                 $s->execute([$uid, $boardKey]);
                 $d = $s->fetch();
                 $panel['content'] = $d ? [
-                    'targetDays' => (int)$d['target_days'],
-                    'startDate'  => $d['start_date'],
-                ] : ['targetDays'=>1500,'startDate'=>date('Y-m-d')];
+                    'targetDays'  => (int)$d['target_days'],
+                    'startDate'   => $d['start_date'],
+                    'initialDays' => isset($d['initial_days']) ? (int)$d['initial_days'] : 0,
+                ] : ['targetDays'=>1500,'startDate'=>date('Y-m-d'),'initialDays'=>0];
                 break;
 
             case 'notice':

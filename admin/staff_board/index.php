@@ -217,6 +217,7 @@ $staffJson = json_encode($staffList, JSON_UNESCAPED_UNICODE);
 <header class="admin-header">
   <h1><?= htmlspecialchars($boardConfig['name']) ?> 管理画面</h1>
   <div class="header-actions">
+    <button class="btn btn-secondary" onclick="openSlideSettings()">🖼 スライドショー設定</button>
     <button class="btn btn-accent2" onclick="openView()">🖥 ビュー画面を開く</button>
     <button class="btn btn-success"  onclick="saveAll()">💾 保存</button>
   </div>
@@ -251,6 +252,33 @@ $staffJson = json_encode($staffList, JSON_UNESCAPED_UNICODE);
   ⚠ DB接続エラー: <?= htmlspecialchars($dbError) ?>
 </div>
 <?php endif; ?>
+
+<!-- ===== スライドショー設定モーダル ===== -->
+<div class="modal-overlay" id="slideModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;">
+  <div class="modal" style="width:380px;background:var(--surface);border-radius:8px;padding:20px;">
+    <div class="modal-header" style="margin-bottom:16px;">
+      <h2>🖼 スライドショー設定</h2>
+      <button class="btn btn-secondary btn-sm" onclick="closeSlideSettings()" style="margin-left:auto">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">
+      スタッフ数が12人を超えると自動的に複数ページ（12人/ページ）に分かれます。
+    </p>
+    <div class="form-group" style="margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="ss_enabled">
+        スライドショー（自動切り替え）を有効にする
+      </label>
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>切り替え間隔（秒）</label>
+      <input type="number" id="ss_interval" value="10" min="3" max="300" step="1">
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:12px">
+      <button class="btn btn-secondary" onclick="closeSlideSettings()">キャンセル</button>
+      <button class="btn btn-success" onclick="saveSlideSettings()">💾 保存</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== 写真ライブラリモーダル ===== -->
 <div class="modal-overlay" id="photoLibModal">
@@ -546,7 +574,56 @@ async function saveAll(silent = false) {
   }
 }
 
+/* ===== スライドショー設定 ===== */
+let _boardCfg = { slideshow_enabled: false, slideshow_interval: 10 };
+
+async function loadBoardCfg() {
+  try {
+    const r = await fetch(`${BASE_URL}/api/boards.php?board=${BOARD_KEY}`);
+    const cfg = await r.json();
+    _boardCfg = cfg;
+    document.getElementById('ss_enabled').checked = !!cfg.slideshow_enabled;
+    document.getElementById('ss_interval').value  = cfg.slideshow_interval || 10;
+  } catch(e) {}
+}
+
+function openSlideSettings() {
+  document.getElementById('ss_enabled').checked = !!_boardCfg.slideshow_enabled;
+  document.getElementById('ss_interval').value  = _boardCfg.slideshow_interval || 10;
+  const m = document.getElementById('slideModal');
+  m.style.display = 'flex';
+}
+
+function closeSlideSettings() {
+  document.getElementById('slideModal').style.display = 'none';
+}
+
+async function saveSlideSettings() {
+  const enabled  = document.getElementById('ss_enabled').checked;
+  const interval = parseInt(document.getElementById('ss_interval').value) || 10;
+  try {
+    await fetch(`${BASE_URL}/api/boards.php?board=${BOARD_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name:               _boardCfg.name   || '安全資格者掲示板',
+        width:              _boardCfg.width  || 1800,
+        height:             _boardCfg.height || 900,
+        slideshow_enabled:  enabled,
+        slideshow_interval: interval,
+      }),
+    });
+    _boardCfg.slideshow_enabled  = enabled;
+    _boardCfg.slideshow_interval = interval;
+    closeSlideSettings();
+    toast('スライドショー設定を保存しました');
+  } catch(e) {
+    toast('保存失敗: ' + e.message, true);
+  }
+}
+
 /* ===== 初期描画 ===== */
+loadBoardCfg();
 renderGrid();
 </script>
 </body>

@@ -254,7 +254,36 @@ body {
   <div id="clock"></div>
 </div>
 
-<div id="grid"></div>
+<div id="slideshow"></div>
+
+<!-- ページナビ -->
+<div id="slide-nav" style="
+  display:none;
+  position:fixed;
+  bottom:14px;
+  left:50%;
+  transform:translateX(-50%);
+  gap:10px;
+  z-index:9999;
+  background:rgba(0,0,0,.35);
+  padding:6px 12px;
+  border-radius:20px;
+">
+</div>
+<style>
+#slideshow { position:relative; width:100%; }
+.staff-slide { display:none; }
+.staff-slide.active { display:grid; }
+.slide-dot {
+  width:12px; height:12px; border-radius:50%;
+  background:rgba(255,255,255,.35);
+  border:2px solid rgba(255,255,255,.7);
+  cursor:pointer; padding:0;
+  transition:background .25s, transform .2s;
+}
+.slide-dot.active { background:#fff; transform:scale(1.25); }
+.slide-dot:hover  { background:rgba(255,255,255,.7); }
+</style>
 
 <script>
 const BASE_URL  = '<?= $baseUrl ?>';
@@ -279,53 +308,102 @@ function eh(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ===== グリッド描画 ===== */
-function render(list) {
-  const grid = document.getElementById('grid');
-  grid.innerHTML = '';
-
-  for (let i = 0; i < 12; i++) {
-    const s = list[i];
-
-    if (!s) {
-      const el = document.createElement('div');
-      el.className = 'card card-empty';
-      grid.appendChild(el);
-      continue;
-    }
-
-    /* 写真 */
-    const photoHtml = s.photoPath
-      ? `<img src="${eh(s.photoPath)}" alt="${eh(s.name)}">`
-      : `<div class="card-photo-none">👤</div>`;
-
-    /* 資格バッジ */
-    const quals = (s.qualifications || []).map(q => `<span class="qual">${eh(q)}</span>`).join('');
-    const qualSection = quals
-      ? `<div class="card-qual-label">資格</div><div class="card-quals">${quals}</div>`
-      : `<div class="card-quals"></div>`;
-
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <div class="card-top">
-        <div class="card-photo">${photoHtml}</div>
-        <div class="card-side">
-          <div class="badge-anzen">
-            <div class="safety-cross"></div>
-            <div class="badge-anzen-text">安全第一</div>
-          </div>
-          ${s.department ? `<div class="card-blood-label">血液型</div><div class="card-blood">${eh(s.department)}</div>` : ''}
+/* ===== カードHTML生成 ===== */
+function buildCard(s) {
+  const photoHtml = s.photoPath
+    ? `<img src="${eh(s.photoPath)}" alt="${eh(s.name)}">`
+    : `<div class="card-photo-none">👤</div>`;
+  const quals = (s.qualifications || []).map(q => `<span class="qual">${eh(q)}</span>`).join('');
+  const qualSection = quals
+    ? `<div class="card-qual-label">資格</div><div class="card-quals">${quals}</div>`
+    : `<div class="card-quals"></div>`;
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="card-top">
+      <div class="card-photo">${photoHtml}</div>
+      <div class="card-side">
+        <div class="badge-anzen">
+          <div class="safety-cross"></div>
+          <div class="badge-anzen-text">安全第一</div>
         </div>
+        ${s.department ? `<div class="card-blood-label">血液型</div><div class="card-blood">${eh(s.department)}</div>` : ''}
       </div>
-      <div class="card-bottom">
-        <div class="card-name-row">
-          <div class="card-name">${eh(s.name)}</div>
-        </div>
-        ${qualSection}
-      </div>`;
+    </div>
+    <div class="card-bottom">
+      <div class="card-name-row"><div class="card-name">${eh(s.name)}</div></div>
+      ${qualSection}
+    </div>`;
+  return card;
+}
 
-    grid.appendChild(card);
+/* ===== スライドショー状態 ===== */
+let _pages   = [];
+let _curSlide = 0;
+let _ssTimer  = null;
+let _boardCfg = { slideshow_enabled: false, slideshow_interval: 10 };
+
+/* ===== スライド描画 ===== */
+function renderSlides(list) {
+  const COLS = 4, ROWS = 3, PER_PAGE = COLS * ROWS;
+  _pages = [];
+  for (let i = 0; i < list.length; i += PER_PAGE) {
+    _pages.push(list.slice(i, i + PER_PAGE));
+  }
+  if (_pages.length === 0) _pages.push([]);
+
+  const ss = document.getElementById('slideshow');
+  ss.innerHTML = '';
+
+  _pages.forEach((pageStaff, pi) => {
+    const slide = document.createElement('div');
+    slide.className = `staff-slide${pi === _curSlide ? ' active' : ''}`;
+    slide.style.cssText = `
+      grid-template-columns:repeat(${COLS},1fr);
+      grid-template-rows:repeat(${ROWS},1fr);
+      gap:10px;
+      padding:10px 14px;
+    `;
+    for (let i = 0; i < PER_PAGE; i++) {
+      if (pageStaff[i]) {
+        slide.appendChild(buildCard(pageStaff[i]));
+      } else {
+        const empty = document.createElement('div');
+        empty.className = 'card card-empty';
+        slide.appendChild(empty);
+      }
+    }
+    ss.appendChild(slide);
+  });
+
+  renderDots();
+  restartTimer();
+}
+
+function renderDots() {
+  const nav = document.getElementById('slide-nav');
+  if (_pages.length <= 1) { nav.style.display = 'none'; return; }
+  nav.style.display = 'flex';
+  nav.innerHTML = _pages.map((_, i) =>
+    `<button class="slide-dot${i === _curSlide ? ' active' : ''}" onclick="goSlide(${i})"></button>`
+  ).join('');
+}
+
+function goSlide(idx) {
+  const slides = document.querySelectorAll('.staff-slide');
+  if (!slides[idx]) return;
+  slides[_curSlide].classList.remove('active');
+  _curSlide = idx;
+  slides[_curSlide].classList.add('active');
+  renderDots();
+  restartTimer();
+}
+
+function restartTimer() {
+  if (_ssTimer) clearInterval(_ssTimer);
+  if (_boardCfg.slideshow_enabled && _pages.length > 1) {
+    const ms = Math.max(3, _boardCfg.slideshow_interval || 10) * 1000;
+    _ssTimer = setInterval(() => goSlide((_curSlide + 1) % _pages.length), ms);
   }
 }
 
@@ -334,8 +412,23 @@ async function refresh() {
   try {
     const r    = await fetch(`${BASE_URL}/api/staff.php?board=${BOARD_KEY}`);
     const json = await r.json();
-    render(json.staff || []);
+    renderSlides(json.staff || []);
   } catch(e) { console.error(e); }
+}
+
+/* ===== ボード設定（サイズ + スライドショー） ===== */
+async function loadConfig() {
+  try {
+    const r   = await fetch(`${BASE_URL}/api/boards.php?board=${BOARD_KEY}`);
+    const cfg = await r.json();
+    _boardCfg = cfg;
+    if (cfg.name) document.getElementById('title').textContent = cfg.name;
+    const w = cfg.width  || 1800;
+    const h = cfg.height || 900;
+    document.body.style.cssText += `;width:${w}px;height:${h}px`;
+    document.querySelector('meta[name=viewport]').content = `width=${w}`;
+    document.getElementById('slideshow').style.height = (h - 52) + 'px';
+  } catch(e) {}
 }
 
 /* ===== 時計 ===== */
@@ -345,11 +438,13 @@ function tick() {
     `${n.getFullYear()}/${p(n.getMonth()+1)}/${p(n.getDate())} ${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
 }
 
-loadConfig();
-refresh();
-tick();
-setInterval(tick, 1000);
-setInterval(refresh, 60000);
+(async () => {
+  await loadConfig();
+  await refresh();
+  tick();
+  setInterval(tick, 1000);
+  setInterval(refresh, 60000);
+})();
 </script>
 </body>
 </html>

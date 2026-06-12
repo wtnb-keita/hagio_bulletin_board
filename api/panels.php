@@ -39,6 +39,7 @@ if ($method === 'GET') {
             'y'      => (int)$row['pos_y'],
             'width'  => (int)$row['width'],
             'height' => (int)$row['height'],
+            'page'   => isset($row['page_number']) ? (int)$row['page_number'] : 1,
             'content'=> [],
         ];
 
@@ -76,8 +77,9 @@ if ($method === 'GET') {
                 $d = $s->fetch();
                 if ($d) {
                     $panel['content'] = [
-                        'targetDays' => (int)$d['target_days'],
-                        'startDate'  => $d['start_date'],
+                        'targetDays'  => (int)$d['target_days'],
+                        'startDate'   => $d['start_date'],
+                        'initialDays' => isset($d['initial_days']) ? (int)$d['initial_days'] : 0,
                     ];
                 }
                 break;
@@ -168,19 +170,21 @@ if ($method === 'POST') {
             $type = $p['type'];
 
             $pdo->prepare(
-                'INSERT INTO panels (board_key, panel_uid, type, title, pos_x, pos_y, width, height, sort_order)
-                 VALUES (?,?,?,?,?,?,?,?,?)
+                'INSERT INTO panels (board_key, panel_uid, type, title, pos_x, pos_y, width, height, sort_order, page_number)
+                 VALUES (?,?,?,?,?,?,?,?,?,?)
                  ON DUPLICATE KEY UPDATE
                    type=VALUES(type), title=VALUES(title),
                    pos_x=VALUES(pos_x), pos_y=VALUES(pos_y),
                    width=VALUES(width), height=VALUES(height),
-                   sort_order=VALUES(sort_order)'
+                   sort_order=VALUES(sort_order),
+                   page_number=VALUES(page_number)'
             )->execute([
                 $boardKey, $uid, $type,
                 $p['title'] ?? '',
                 $p['x'] ?? 0, $p['y'] ?? 0,
                 $p['width'] ?? 300, $p['height'] ?? 200,
                 $i,
+                $p['page'] ?? 1,
             ]);
 
             $c = $p['content'] ?? [];
@@ -216,13 +220,14 @@ if ($method === 'POST') {
 
                 case 'accident':
                     $pdo->prepare(
-                        'INSERT INTO panel_accident (panel_uid, board_key, target_days, start_date)
-                         VALUES (?,?,?,?)
-                         ON DUPLICATE KEY UPDATE target_days=VALUES(target_days), start_date=VALUES(start_date)'
+                        'INSERT INTO panel_accident (panel_uid, board_key, target_days, start_date, initial_days)
+                         VALUES (?,?,?,?,?)
+                         ON DUPLICATE KEY UPDATE target_days=VALUES(target_days), start_date=VALUES(start_date), initial_days=VALUES(initial_days)'
                     )->execute([
                         $uid, $boardKey,
-                        $c['targetDays'] ?? 1500,
-                        $c['startDate']  ?? date('Y-m-d'),
+                        $c['targetDays']  ?? 1500,
+                        $c['startDate']   ?? date('Y-m-d'),
+                        $c['initialDays'] ?? 0,
                     ]);
                     break;
 

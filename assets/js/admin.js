@@ -9,6 +9,10 @@ const Admin = (() => {
   let activeId = null;
   let nextId   = typeof INITIAL_NEXT_ID !== 'undefined' ? INITIAL_NEXT_ID : 1;
 
+  // ページ管理
+  let pages       = typeof INITIAL_PAGES !== 'undefined' ? [...INITIAL_PAGES] : [{page_number:1,page_name:'ページ 1',sort_order:0}];
+  let currentPage = 1;
+
   const BOARD_KEY = typeof ADMIN_BOARD_KEY !== 'undefined' ? ADMIN_BOARD_KEY : 'safety_board_1';
   const esc = PanelRender.escHtml;
 
@@ -32,6 +36,7 @@ const Admin = (() => {
         data = { panels: [] };
       }
     }
+    renderPageTabs();
     renderSidebar();
     // 初期バージョンを記録し、他者の変更を10秒ごとに監視
     await syncVersion();
@@ -112,13 +117,80 @@ const Admin = (() => {
   const TYPE_LABELS = { media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知', disaster:'災害速報', responsible:'責任者掲示' };
   function typeLabel(type) { return TYPE_LABELS[type] || type; }
 
+  // ---- ページタブ ----
+  function renderPageTabs() {
+    const container = document.getElementById('pageTabs');
+    if (!container) return;
+    container.innerHTML =
+      pages.map(pg => `
+      <button class="page-tab ${pg.page_number === currentPage ? 'active' : ''}"
+              onclick="Admin.switchPage(${pg.page_number})"
+              title="ダブルクリックでリネーム"
+              ondblclick="Admin.renamePage(${pg.page_number})">
+        ${esc(pg.page_name)}
+        ${pages.length > 1 ? `<span class="page-tab-del" onclick="event.stopPropagation();Admin.deletePage(${pg.page_number})" title="削除">✕</span>` : ''}
+      </button>`).join('') +
+      `<button class="page-tab-add" onclick="Admin.addPage()" title="ページを追加">＋ ページ追加</button>`;
+  }
+
+  function switchPage(pageNum) {
+    applyEdits();
+    currentPage = pageNum;
+    activeId    = null;
+    renderPageTabs();
+    renderSidebar();
+    document.getElementById('editor').innerHTML = '<div class="editor-empty">← パネルを選択して編集</div>';
+  }
+
+  function addPage() {
+    const maxNum = Math.max(0, ...pages.map(p => p.page_number));
+    const newNum = maxNum + 1;
+    pages.push({ page_number: newNum, page_name: 'ページ ' + newNum, sort_order: pages.length });
+    currentPage = newNum;
+    activeId    = null;
+    renderPageTabs();
+    renderSidebar();
+    document.getElementById('editor').innerHTML = '<div class="editor-empty">← パネルを選択して編集</div>';
+    _savePages();
+  }
+
+  function deletePage(pageNum) {
+    if (pages.length <= 1) { showToast('最後のページは削除できません', true); return; }
+    const pg = pages.find(p => p.page_number === pageNum);
+    if (!confirm(`「${pg?.page_name || 'ページ'}」を削除しますか？\nこのページのパネルも全て削除されます。`)) return;
+    data.panels = data.panels.filter(p => (p.page || 1) !== pageNum);
+    pages       = pages.filter(p => p.page_number !== pageNum);
+    if (currentPage === pageNum) currentPage = pages[0].page_number;
+    activeId = null;
+    renderPageTabs();
+    renderSidebar();
+    document.getElementById('editor').innerHTML = '<div class="editor-empty">← パネルを選択して編集</div>';
+    _savePages();
+    saveAll();
+  }
+
+  function renamePage(pageNum) {
+    const pg = pages.find(p => p.page_number === pageNum);
+    if (!pg) return;
+    const name = prompt('ページ名を入力してください', pg.page_name);
+    if (name === null) return;
+    pg.page_name = name.trim() || pg.page_name;
+    renderPageTabs();
+    _savePages();
+  }
+
+  async function _savePages() {
+    try { await API.savePages(pages, BOARD_KEY); } catch(e) { showToast('ページ保存エラー: ' + e.message, true); }
+  }
+
   function renderSidebar() {
-    const list = document.getElementById('panelList');
-    if (!data.panels.length) {
-      list.innerHTML = '<div class="panel-list-empty">パネルがありません</div>';
+    const list         = document.getElementById('panelList');
+    const visiblePanels = data.panels.filter(p => (p.page || 1) === currentPage);
+    if (!visiblePanels.length) {
+      list.innerHTML = '<div class="panel-list-empty">このページにパネルがありません</div>';
       return;
     }
-    list.innerHTML = data.panels.map(p => `
+    list.innerHTML = visiblePanels.map(p => `
       <div class="panel-item ${p.id === activeId ? 'active' : ''}" onclick="Admin.selectPanel('${p.id}')">
         <span class="type-tag type-${p.type}">${typeLabel(p.type)}</span>
         <span class="panel-item-name">${esc(p.title || '（無題）')}</span>
@@ -175,6 +247,7 @@ const Admin = (() => {
       type: _selectedType,
       title: title || defaultTitles[_selectedType],
       x: 10, y: 10, width: defW, height: defH,
+      page: currentPage,
       content: defaultContent(_selectedType),
     };
     data.panels.push(panel);
@@ -187,7 +260,7 @@ const Admin = (() => {
     switch(type) {
       case 'media':    return { filePath:'', fileType:'', fileName:'', label:'' };
       case 'text':     return { text:'', vertical: false, fontSize: 14 };
-      case 'accident': return { targetDays: 1500, startDate: new Date().toISOString().split('T')[0] };
+      case 'accident': return { targetDays: 1500, startDate: new Date().toISOString().split('T')[0], initialDays: 0 };
       case 'notice':   return { notices: [] };
       case 'disaster':     return { items: [], slideshowEnabled: false, slideshowInterval: 5 };
       case 'responsible':  return { role: '化学物質管理者', name: '', fontSize: 40 };
@@ -248,7 +321,7 @@ const Admin = (() => {
     // パネル座標はすべて実寸(px)で記述する
 
     const ghosts = data.panels
-      .filter(p => p.id !== panel.id)
+      .filter(p => p.id !== panel.id && (p.page || 1) === currentPage)
       .map(p => `<div class="pos-ghost" style="left:${p.x}px;top:${p.y}px;width:${p.width}px;height:${p.height}px">
           ${p.title ? '<div class="pos-ghost-title"></div>' : ''}
         </div>`).join('');
@@ -280,6 +353,7 @@ const Admin = (() => {
             <span>Y: <b id="dispY">${panel.y||0}</b> px</span>
             <span>幅: <b id="dispW">${panel.width||300}</b> px</span>
             <span>高さ: <b id="dispH">${panel.height||200}</b> px</span>
+            <span>ページ: <b>${esc(pages.find(pg => pg.page_number === (panel.page||1))?.page_name || String(panel.page||1))}</b></span>
           </div>
           <p class="pos-hint">パネルをドラッグして移動 ／ 角・辺のハンドルでリサイズ</p>
           <!-- 隠し入力（applyEdits で読み取る） -->
@@ -352,8 +426,9 @@ const Admin = (() => {
       case 'accident': {
         const start   = c.startDate || new Date().toISOString().split('T')[0];
         const elapsed = Math.max(0, Math.floor((new Date() - new Date(start)) / 86400000));
+        const total   = elapsed + (c.initialDays || 0);
         return `<div class="pc-accident">
-          <div class="pc-accident-num">${elapsed.toLocaleString()}</div>
+          <div class="pc-accident-num">${total.toLocaleString()}</div>
           <div class="pc-accident-unit">日</div>
           <div class="pc-accident-target">目標 ${(c.targetDays||1500).toLocaleString()} 日</div>
         </div>`;
@@ -876,6 +951,14 @@ const Admin = (() => {
             <input type="date" id="f_startDate" value="${escAttr(c.startDate)}">
           </div>
         </div>
+        <div class="form-group">
+          <label>開始時点の達成済み日数（初回設定用）</label>
+          <input type="number" id="f_initialDays" value="${c.initialDays||0}" min="0"
+                 placeholder="0">
+          <p style="font-size:11px;color:var(--text-dim);margin-top:4px">
+            このシステム導入前に既に達成していた日数を入力すると、表示日数に加算されます。
+          </p>
+        </div>
       </div>`;
   }
 
@@ -972,8 +1055,9 @@ const Admin = (() => {
         if (g('f_fontSize')) panel.content.fontSize = parseInt(g('f_fontSize').value) || 14;
         break;
       case 'accident':
-        if (g('f_targetDays')) panel.content.targetDays = parseInt(g('f_targetDays').value) || 1500;
-        if (g('f_startDate'))  panel.content.startDate  = g('f_startDate').value;
+        if (g('f_targetDays'))  panel.content.targetDays  = parseInt(g('f_targetDays').value) || 1500;
+        if (g('f_startDate'))   panel.content.startDate   = g('f_startDate').value;
+        if (g('f_initialDays')) panel.content.initialDays = Math.max(0, parseInt(g('f_initialDays').value) || 0);
         break;
       case 'notice':
         syncNotices(panel);
@@ -993,9 +1077,32 @@ const Admin = (() => {
     showToast('反映しました（未保存）');
   }
 
+  // ---- スライドショートグルボタン ----
+  function _setSsBtn(enabled) {
+    const btn = document.getElementById('bs_slideshow');
+    if (!btn) return;
+    btn.dataset.enabled = enabled ? '1' : '0';
+    btn.querySelector('.ss-dot').style.background   = enabled ? '#4caf50' : '#aaa';
+    btn.querySelector('.ss-label').textContent       = enabled ? '有効' : '無効';
+    btn.style.background  = enabled ? 'rgba(76,175,80,0.12)' : 'var(--surface2)';
+    btn.style.borderColor = enabled ? '#4caf50'               : 'var(--border)';
+    btn.style.color       = enabled ? '#2e7d32'               : 'var(--text-dim)';
+  }
+
+  function toggleSlideshowBtn() {
+    const btn = document.getElementById('bs_slideshow');
+    if (btn) _setSsBtn(btn.dataset.enabled !== '1');
+  }
+
   // ---- ボード設定 ----
   function openBoardSettings() {
     document.getElementById('boardSettingsModal').classList.add('open');
+    // DBから現在のスライドショー設定を読み込んでトグルボタン・間隔を復元
+    API.getBoard(BOARD_KEY).then(cfg => {
+      _setSsBtn(!!cfg.slideshow_enabled);
+      const ivEl = document.getElementById('bs_interval');
+      if (ivEl && cfg.slideshow_interval) ivEl.value = cfg.slideshow_interval;
+    }).catch(() => {});
     document.getElementById('bs_name')?.focus();
   }
 
@@ -1004,16 +1111,18 @@ const Admin = (() => {
   }
 
   async function saveBoardSettings() {
-    const name   = document.getElementById('bs_name')?.value?.trim();
-    const width  = parseInt(document.getElementById('bs_width')?.value);
-    const height = parseInt(document.getElementById('bs_height')?.value);
+    const name       = document.getElementById('bs_name')?.value?.trim();
+    const width      = parseInt(document.getElementById('bs_width')?.value);
+    const height     = parseInt(document.getElementById('bs_height')?.value);
+    const ssEnabled  = document.getElementById('bs_slideshow')?.dataset.enabled === '1';
+    const ssInterval = parseInt(document.getElementById('bs_interval')?.value) || 10;
 
     if (!name)                         { showToast('掲示板名を入力してください', true); return; }
     if (width  < 400 || width  > 7680) { showToast('幅は 400〜7680 で指定してください', true); return; }
     if (height < 200 || height > 4320) { showToast('高さは 200〜4320 で指定してください', true); return; }
 
     try {
-      const json = await API.saveBoard({ name, width, height }, BOARD_KEY);
+      const json = await API.saveBoard({ name, width, height, slideshow_enabled: ssEnabled, slideshow_interval: ssInterval }, BOARD_KEY);
       if (json.ok) {
         closeBoardSettings();
         showToast('ボード設定を保存しました。ページを再読み込みします...');
@@ -1072,12 +1181,17 @@ const Admin = (() => {
     openBoardSettings,
     closeBoardSettings,
     saveBoardSettings,
+    toggleSlideshowBtn,
     openLayoutPreview,
     closeLayoutPreview,
     openViewBoard,
     openDisasterLibrary,
     deleteDisasterItem,
     addDisasterTextItem,
+    switchPage,
+    addPage,
+    deletePage,
+    renamePage,
     // responsible は内部のみ
   };
 })();

@@ -63,17 +63,26 @@ const PanelRender = (() => {
     const c = panel.content || {};
     const target  = c.targetDays || 1500;
     const elapsed = calcElapsedDays(c.startDate || new Date().toISOString().split('T')[0]);
-    const pct     = Math.min(100, Math.round(elapsed / target * 100));
+    const total   = elapsed + (c.initialDays || 0);
     const today   = new Date();
-    const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日 現在`;
+    const month   = today.getMonth() + 1;
+    const day     = today.getDate();
     return `
       <div class="panel-body">
-        <div class="accident-target">目標日数 ${target.toLocaleString()} 日</div>
-        <div class="accident-date">${dateStr}</div>
-        <div class="accident-days">${elapsed.toLocaleString()}</div>
-        <div class="accident-days-label">日</div>
-        <div class="accident-progress">
-          <div class="accident-progress-bar" style="width:${pct}%"></div>
+        <div class="accident-header">
+          <span class="accident-header-text">無災害</span>
+          <span class="accident-plus">＋</span>
+          <span class="accident-header-text">記録表</span>
+        </div>
+        <div class="accident-table">
+          <div class="accident-row">
+            <span class="accident-row-label">目標日数</span>
+            <span class="accident-row-value">${target.toLocaleString()}<span class="accident-unit">日</span></span>
+          </div>
+          <div class="accident-row accent-row">
+            <span class="accident-row-label">${month}月&nbsp;${day}日</span>
+            <span class="accident-row-value accent">${total.toLocaleString()}<span class="accident-unit">日</span></span>
+          </div>
         </div>
       </div>`;
   }
