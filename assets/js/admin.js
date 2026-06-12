@@ -291,7 +291,8 @@ const Admin = (() => {
   // ---- エディタ描画 ----
   function renderEditor(panel) {
     const ed = document.getElementById('editor');
-    const hasTitle = panel.title && panel.title.length > 0;
+    // titleVisible が明示されていれば優先、未設定は title 文字列の有無で後方互換
+    const hasTitle = panel.titleVisible !== undefined ? !!panel.titleVisible : !!(panel.title);
 
     // タイトルセクション
     const titleSection = `
@@ -301,18 +302,18 @@ const Admin = (() => {
           <button class="toggle-btn ${hasTitle ? 'active' : ''}" onclick="Admin.setTitleMode(true)">あり</button>
           <button class="toggle-btn ${hasTitle ? '' : 'active'}" onclick="Admin.setTitleMode(false)">なし</button>
         </div>
-        <div id="titleInputArea" style="${hasTitle ? '' : 'display:none'}">
+        <div id="titlePreviewArea" style="${hasTitle ? '' : 'display:none'}">
           <div class="title-preview-wrap">
             <div class="title-preview-visual">
               <div class="title-preview-bar" id="titlePreviewBar">${esc(panel.title)}</div>
               <div class="title-preview-body">パネル本体</div>
             </div>
           </div>
-          <div class="form-group">
-            <input type="text" id="f_title" value="${escAttr(panel.title)}"
-              placeholder="タイトルを入力"
-              oninput="document.getElementById('titlePreviewBar').textContent=this.value">
-          </div>
+        </div>
+        <div class="form-group" style="margin-top:8px">
+          <input type="text" id="f_title" value="${escAttr(panel.title)}"
+            placeholder="タイトルを入力（「なし」でも保持されます）"
+            oninput="document.getElementById('titlePreviewBar').textContent=this.value">
         </div>
       </div>`;
 
@@ -379,8 +380,9 @@ const Admin = (() => {
     }
 
     html += `
-      <div class="form-row" style="margin-top:14px">
-        <button class="btn btn-success" onclick="Admin.applyEdits();Admin.saveAll()">💾 保存</button>
+      <div class="editor-actions">
+        <button class="btn btn-success btn-editor-action" onclick="Admin.applyEdits();Admin.saveAll()">💾 保存</button>
+        <button class="btn btn-secondary btn-editor-action" onclick="Admin.saveAsTemplate()">📋 テンプレートとして保存</button>
       </div>
     </div>`;
 
@@ -396,15 +398,15 @@ const Admin = (() => {
     document.querySelectorAll('.title-toggle-row .toggle-btn').forEach((b, i) => {
       b.classList.toggle('active', show ? i === 0 : i === 1);
     });
-    const area = document.getElementById('titleInputArea');
-    if (area) area.style.display = show ? '' : 'none';
+    // プレビューバーのみ表示切替（入力欄は常に表示）
+    const preview = document.getElementById('titlePreviewArea');
+    if (preview) preview.style.display = show ? '' : 'none';
 
-    // タイトルなし時はパネルプレビューを no-title にする
+    // ポジションエディタのプレビューも連動
     const posPanel = document.getElementById('posPanel');
     if (posPanel) posPanel.classList.toggle('no-title', !show);
 
     if (show) document.getElementById('f_title')?.focus();
-    else if (document.getElementById('f_title')) document.getElementById('f_title').value = '';
   }
 
   // ---- ポジションエディタ内パネルコンテンツ（実寸フォントで描画 → scale縮小で正確に見える） ----
@@ -578,7 +580,7 @@ const Admin = (() => {
     const previewHtml = c.filePath ? `
       <div class="file-preview" id="filePreview">
         ${c.fileType === 'application/pdf'
-          ? `<div style="font-size:80px;line-height:1">📄</div>`
+          ? `<div style="font-size:56px;line-height:1">📄</div>`
           : `<img src="${c.filePath}" alt="preview">`}
         <div class="file-preview-info">
           <div class="file-preview-name">${esc(c.fileName)}</div>
@@ -588,23 +590,25 @@ const Admin = (() => {
       </div>` : '<div id="filePreview"></div>';
 
     return `
-      <div class="card form-section">
-        <h3>ファイル（画像 / PDF）</h3>
-        <div class="file-drop" id="fileDrop" onclick="document.getElementById('fileInput').click()">
-          <div style="font-size:40px;margin-bottom:10px">🖼️</div>
-          クリックまたはドロップで画像・PDFをアップロード<br>
-          <span style="font-size:13px;color:#888">JPEG / PNG / GIF / WEBP / PDF（最大20MB）</span>
+      <div class="media-editor">
+        <div class="card form-section">
+          <h3>ファイル（画像 / PDF）</h3>
+          <div class="file-drop" id="fileDrop" onclick="document.getElementById('fileInput').click()">
+            <div style="font-size:28px;margin-bottom:7px">🖼️</div>
+            クリックまたはドロップで画像・PDFをアップロード<br>
+            <span style="font-size:12px;color:#888">JPEG / PNG / GIF / WEBP / PDF（最大20MB）</span>
+          </div>
+          <input type="file" id="fileInput" accept="image/*,application/pdf" style="display:none">
+          ${previewHtml}
+          <div style="margin-top:8px">
+            <button class="btn btn-secondary btn-sm" onclick="Admin.openUploadLibrary()">📁 アップロード済みから選択</button>
+          </div>
         </div>
-        <input type="file" id="fileInput" accept="image/*,application/pdf" style="display:none">
-        ${previewHtml}
-        <div style="margin-top:12px">
-          <button class="btn btn-secondary" onclick="Admin.openUploadLibrary()">📁 アップロード済みから選択</button>
-        </div>
-      </div>
-      <div class="card form-section">
-        <h3>ラベル（ファイル下部テキスト）</h3>
-        <div class="form-group">
-          <textarea id="f_label" rows="4" placeholder="画像・PDFの下部に重ねて表示するテキスト（省略可）">${esc(c.label)}</textarea>
+        <div class="card form-section">
+          <h3>ラベル（ファイル下部テキスト）</h3>
+          <div class="form-group">
+            <textarea id="f_label" rows="3" placeholder="画像・PDFの下部に重ねて表示するテキスト（省略可）">${esc(c.label)}</textarea>
+          </div>
         </div>
       </div>`;
   }
@@ -1054,9 +1058,10 @@ const Admin = (() => {
     const g = id => document.getElementById(id);
 
     // タイトル（あり/なし トグル対応）
-    const titleArea = g('titleInputArea');
-    const titleShown = titleArea && titleArea.style.display !== 'none';
-    panel.title = titleShown ? (g('f_title')?.value ?? '') : '';
+    const titlePreview = g('titlePreviewArea');
+    const titleShown = titlePreview && titlePreview.style.display !== 'none';
+    panel.title        = g('f_title')?.value ?? '';
+    panel.titleVisible = titleShown;
 
     if (g('f_x'))     panel.x      = parseInt(g('f_x').value)  || 0;
     if (g('f_y'))     panel.y      = parseInt(g('f_y').value)  || 0;
@@ -1176,6 +1181,111 @@ const Admin = (() => {
     window.open(`${base}${path}`, '_blank');
   }
 
+  // ---- テンプレート管理 ----
+  function _tplApiBase() {
+    const base = typeof BASE_URL !== 'undefined' ? BASE_URL : '../..';
+    return `${base}/api/templates.php`;
+  }
+
+  async function saveAsTemplate() {
+    applyEdits();
+    const panel = data.panels.find(p => p.id === activeId);
+    if (!panel) { showToast('保存するパネルを選択してください', true); return; }
+    const defaultName = panel.title || typeLabel(panel.type);
+    const name = prompt('テンプレート名を入力してください', defaultName);
+    if (name === null) return;
+    try {
+      await fetch(_tplApiBase(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim() || defaultName,
+          type: panel.type,
+          title: panel.title || '',
+          content: panel.content || {},
+        }),
+      });
+      showToast('テンプレートに保存しました');
+    } catch(e) {
+      showToast('保存エラー: ' + e.message, true);
+    }
+  }
+
+  async function openTemplateModal() {
+    document.getElementById('templateModal').classList.add('open');
+    await _renderTemplateList();
+  }
+
+  function closeTemplateModal() {
+    document.getElementById('templateModal').classList.remove('open');
+  }
+
+  async function _renderTemplateList() {
+    const list = document.getElementById('templateList');
+    if (!list) return;
+    list.innerHTML = '<div class="template-empty">読み込み中...</div>';
+    try {
+      const res   = await fetch(_tplApiBase());
+      const json  = await res.json();
+      const tmpls = json.templates || [];
+      if (!tmpls.length) {
+        list.innerHTML = `<div class="template-empty">テンプレートがありません<br><small>パネル編集画面の「📋 テンプレートとして保存」から追加できます</small></div>`;
+        return;
+      }
+      list.innerHTML = tmpls.map(t => `
+        <div class="template-item">
+          <span class="type-tag type-${t.type}">${typeLabel(t.type)}</span>
+          <div class="template-item-info">
+            <div class="template-item-name">${esc(t.name)}</div>
+            ${t.title ? `<div class="template-item-title">${esc(t.title)}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-primary btn-sm" onclick="Admin.applyTemplate(${t.id})">使用</button>
+            <button class="btn btn-danger btn-sm" onclick="Admin.deleteTemplate(${t.id})">削除</button>
+          </div>
+        </div>`).join('');
+    } catch(e) {
+      list.innerHTML = '<div class="template-empty">読み込みエラー</div>';
+    }
+  }
+
+  async function applyTemplate(tplId) {
+    try {
+      const res  = await fetch(_tplApiBase());
+      const json = await res.json();
+      const tpl  = (json.templates || []).find(t => t.id === tplId);
+      if (!tpl) return;
+      const id = 'p' + nextId++;
+      const newPanel = {
+        id,
+        type: tpl.type,
+        title: tpl.title || '',
+        content: JSON.parse(JSON.stringify(tpl.content || {})),
+        page: currentPage,
+        x: 0, y: 0, width: 400, height: 300,
+        titleVisible: true,
+      };
+      data.panels.push(newPanel);
+      activeId = id;
+      renderSidebar();
+      renderEditor(newPanel);
+      closeTemplateModal();
+      showToast(`「${tpl.name}」を適用しました（未保存）`);
+    } catch(e) {
+      showToast('適用エラー: ' + e.message, true);
+    }
+  }
+
+  async function deleteTemplate(tplId) {
+    if (!confirm('このテンプレートを削除しますか？')) return;
+    try {
+      await fetch(`${_tplApiBase()}?id=${tplId}`, { method: 'DELETE' });
+      await _renderTemplateList();
+    } catch(e) {
+      showToast('削除エラー: ' + e.message, true);
+    }
+  }
+
   // ---- 公開API ----
   return {
     init,
@@ -1210,7 +1320,11 @@ const Admin = (() => {
     addPage,
     deletePage,
     renamePage,
-    // responsible は内部のみ
+    saveAsTemplate,
+    openTemplateModal,
+    closeTemplateModal,
+    applyTemplate,
+    deleteTemplate,
   };
 })();
 

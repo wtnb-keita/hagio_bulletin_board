@@ -199,6 +199,7 @@ $appBase = rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROO
         <div class="sidebar-header">
             <h2>パネル一覧</h2>
             <button class="btn btn-primary btn-sm" onclick="Admin.openAddPanel()">＋ 追加</button>
+            <button class="btn btn-secondary btn-sm" onclick="Admin.openTemplateModal()">📋 テンプレート</button>
         </div>
         <div class="panel-list" id="panelList"></div>
     </aside>
@@ -210,6 +211,17 @@ $appBase = rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROO
 
 <!-- トースト -->
 <div class="toast" id="toast"></div>
+
+<!-- ========== テンプレートモーダル ========== -->
+<div class="modal-overlay" id="templateModal">
+    <div class="modal" style="width:560px;max-height:80vh;display:flex;flex-direction:column">
+        <div class="modal-header">
+            <h2>📋 テンプレートから選択</h2>
+            <button class="btn btn-secondary btn-sm" onclick="Admin.closeTemplateModal()" style="margin-left:auto">✕</button>
+        </div>
+        <div id="templateList" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+</div>
 
 <!-- ========== パネル追加モーダル ========== -->
 <div class="modal-overlay" id="addPanelModal">

@@ -168,7 +168,8 @@ const PanelRender = (() => {
     div.style.width  = `${panel.width  || 300}px`;
     div.style.height = `${panel.height || 200}px`;
 
-    const titleHtml = panel.title
+    const showTitle = panel.titleVisible !== undefined ? !!panel.titleVisible : !!panel.title;
+    const titleHtml = (showTitle && panel.title)
       ? `<div class="panel-title">${escHtml(panel.title)}</div>`
       : '';
 

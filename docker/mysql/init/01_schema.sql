@@ -121,6 +121,16 @@ CREATE TABLE IF NOT EXISTS staff_qualifications (
   FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---- パネルテンプレート（全ボード共通） ----
+CREATE TABLE IF NOT EXISTS panel_templates (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  name       VARCHAR(255) NOT NULL,
+  type       VARCHAR(50)  NOT NULL,
+  title      VARCHAR(255) NOT NULL DEFAULT '',
+  content    JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ============================================================
 --  初期データ
 -- ============================================================
