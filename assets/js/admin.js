@@ -464,7 +464,8 @@ const Admin = (() => {
   }
 
   // ---- ビジュアル配置エディタ ----
-  const BOARD_W = 1800, BOARD_H = 900;
+  const BOARD_W = typeof ADMIN_BOARD_W !== 'undefined' ? ADMIN_BOARD_W : 1800;
+  const BOARD_H = typeof ADMIN_BOARD_H !== 'undefined' ? ADMIN_BOARD_H : 900;
   const MIN_SZ  = 50;   // 実寸最小値(px)
 
   function getPosScale() {
@@ -476,6 +477,9 @@ const Admin = (() => {
     const board = document.getElementById('posBoard');
     const inner = document.getElementById('posBoardInner');
     if (!board || !inner) return;
+    // innerのサイズを実際の解像度に合わせる
+    inner.style.width  = BOARD_W + 'px';
+    inner.style.height = BOARD_H + 'px';
     const scale = getPosScale();
     board.style.height = Math.round(BOARD_H * scale) + 'px';
     inner.style.transform = `scale(${scale})`;

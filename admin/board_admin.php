@@ -395,6 +395,8 @@ const INITIAL_PAGES   = <?= $pagesJson ?>;
 const BASE_URL        = '<?= $appBase ?>';
 const ADMIN_BOARD_KEY = '<?= $boardKey ?>';
 const ADMIN_VIEW_URL  = '<?= $bCfg['view_url'] ?>';
+const ADMIN_BOARD_W   = <?= $boardConfig['width'] ?>;
+const ADMIN_BOARD_H   = <?= $boardConfig['height'] ?>;
 </script>
 <script src="../assets/js/admin.js"></script>
 </body>

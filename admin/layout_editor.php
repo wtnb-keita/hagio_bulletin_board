@@ -49,8 +49,11 @@ $pagesJson  = json_encode($pages,  JSON_UNESCAPED_UNICODE);
 <title>レイアウト編集 - <?= htmlspecialchars($cfg['title']) ?></title>
 <link rel="stylesheet" href="../assets/css/common.css">
 <link rel="stylesheet" href="../assets/css/admin.css">
+<link rel="stylesheet" href="../assets/css/view-board.css">
 <style>
-body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+/* view-board.css のbodyスタイルを上書き */
+body { width: auto !important; height: 100vh !important; background: var(--bg) !important;
+       display: flex; flex-direction: column; overflow: hidden; }
 
 .layout-header {
   background: var(--accent);
@@ -143,76 +146,34 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
   pointer-events: none;
 }
 
-/* ---- パネル ---- */
+/* ---- パネルラッパー（ドラッグ・選択用） ---- */
 .le-panel {
   position: absolute;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: 4px;
-  overflow: hidden;
+  outline: 2px solid rgba(255,255,255,0.25);
+  outline-offset: -2px;
+  border-radius: 6px;
   cursor: move;
   user-select: none;
-  display: flex;
-  flex-direction: column;
-  background: rgba(255,255,255,0.06);
-  transition: border-color .1s, box-shadow .1s;
+  overflow: visible;
+  transition: outline-color .1s, box-shadow .1s;
 }
-.le-panel:hover  { border-color: rgba(255,255,255,0.6); }
+.le-panel:hover  { outline-color: rgba(255,255,255,0.7); }
 .le-panel.active {
-  border-color: #fff;
-  box-shadow: 0 0 0 2px var(--accent), 0 0 16px rgba(46,125,50,0.6);
-  z-index: 100 !important;
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent), 0 0 24px rgba(46,125,50,0.6);
+  /* z-index はレイヤー順を維持するため上書きしない */
 }
-.le-panel.type-media       { border-color: rgba(165,214,167,0.5); }
-.le-panel.type-text        { border-color: rgba(144,202,249,0.5); }
-.le-panel.type-accident    { border-color: rgba(255,204,128,0.5); }
-.le-panel.type-notice      { border-color: rgba(128,222,234,0.5); }
-.le-panel.type-responsible { border-color: rgba(255,213,0,0.7);   }
-.le-panel.type-disaster    { border-color: rgba(244,67,54,0.7);   }
 
-.le-panel-title {
-  font-size: 11px;
-  font-weight: bold;
-  padding: 3px 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 0;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.le-panel.type-media       .le-panel-title { background: rgba(46,125,50,0.85); }
-.le-panel.type-text        .le-panel-title { background: rgba(2,119,189,0.85); }
-.le-panel.type-accident    .le-panel-title { background: rgba(239,108,0,0.85); }
-.le-panel.type-notice      .le-panel-title { background: rgba(0,131,143,0.85); }
-.le-panel.type-responsible .le-panel-title { background: rgba(180,140,0,0.85); }
-.le-panel.type-disaster    .le-panel-title {
-  background: repeating-linear-gradient(45deg,#f44336 0,#f44336 8px,#111 8px,#111 16px);
-}
-.le-panel.no-title .le-panel-title { display: none; }
-
-.le-panel-body {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.le-panel-body img { width:100%; height:100%; object-fit:contain; display:block; }
-.le-panel-body .placeholder {
-  color: rgba(255,255,255,0.3);
-  font-size: 11px;
-  text-align: center;
-  padding: 4px;
-  pointer-events: none;
-}
-.le-panel-body .accident-num {
-  color: #ffcc80;
-  font-size: clamp(10px,3cqw,40px);
-  font-weight: bold;
-  text-align: center;
+/* viewのCSSをle-panel内で上書き（inline styleも!importantで無効化） */
+.le-panel .panel {
+  position: absolute !important;
+  left:   0 !important;
+  top:    0 !important;
+  right:  0 !important;
+  bottom: 0 !important;
+  width:  auto !important;
+  height: auto !important;
   pointer-events: none;
 }
 
@@ -272,6 +233,21 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .side-panel-item:hover  { background: var(--surface2); }
 .side-panel-item.active { background: #e8f5e9; border-color: var(--accent); }
 .side-panel-item .name  { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.layer-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
 
 .info-card { background:var(--surface2); border-radius:6px; padding:10px; font-size:12px; }
 .info-row  { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid var(--border); }
@@ -337,6 +313,7 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 <?php endif; ?>
 
 <script src="../assets/js/api.js"></script>
+<script src="../assets/js/panel-render.js"></script>
 <script>
 const BOARD_KEY  = '<?= $boardKey ?>';
 const BOARD_W    = <?= $boardW ?>;
@@ -397,34 +374,38 @@ function resetView() {
   applyScale();
 }
 
-// ---- ボード描画（現在ページのみ） ----
+// ---- ボード描画（現在ページのみ・sort_order順） ----
 function renderBoard() {
   const board = document.getElementById('layoutBoard');
   const label = board.querySelector('.board-label');
   board.innerHTML = '';
   board.appendChild(label);
 
-  const pagePanels = panels.filter(p => (p.page || 1) === currentPage);
-  pagePanels.forEach((p, idx) => board.appendChild(createPanelEl(p, idx)));
+  const pagePanels = panels
+    .filter(p => (p.page || 1) === currentPage)
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  pagePanels.forEach(p => board.appendChild(createPanelEl(p)));
 }
 
-function createPanelEl(p, zIdx) {
+function createPanelEl(p) {
   const el = document.createElement('div');
-  el.className  = `le-panel type-${p.type} ${p.title ? '' : 'no-title'}`;
+  el.className  = 'le-panel';
   el.dataset.id = p.id;
-  el.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.width}px;height:${p.height}px;z-index:${zIdx+1}`;
+  const layer = p.sort_order ?? 1;
+  el.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.width}px;height:${p.height}px;z-index:${layer}`;
 
-  el.innerHTML = `
-    <div class="le-panel-title">${TYPE_ICONS[p.type]||''} ${escHtml(p.title || TYPE_LABELS[p.type]||p.type)}</div>
-    <div class="le-panel-body">${panelBodyHtml(p)}</div>
-    <div class="le-resize nw" data-dir="nw"></div>
-    <div class="le-resize n"  data-dir="n"></div>
-    <div class="le-resize ne" data-dir="ne"></div>
-    <div class="le-resize e"  data-dir="e"></div>
-    <div class="le-resize se" data-dir="se"></div>
-    <div class="le-resize s"  data-dir="s"></div>
-    <div class="le-resize sw" data-dir="sw"></div>
-    <div class="le-resize w"  data-dir="w"></div>`;
+  // viewと同じ描画を使用
+  const inner = PanelRender.createPanelElement(p);
+  el.appendChild(inner);
+
+  // リサイズハンドル
+  ['nw','n','ne','e','se','s','sw','w'].forEach(d => {
+    const h = document.createElement('div');
+    h.className = `le-resize ${d}`;
+    h.dataset.dir = d;
+    el.appendChild(h);
+  });
 
   setupDragResize(el, p);
   el.addEventListener('pointerdown', e => {
@@ -433,47 +414,7 @@ function createPanelEl(p, zIdx) {
   return el;
 }
 
-function panelBodyHtml(p) {
-  const c = p.content || {};
-  switch (p.type) {
-    case 'media':
-      if (!c.filePath) return `<div class="placeholder">🖼 画像なし</div>`;
-      if ((c.fileType||'').includes('pdf')) return `<div class="placeholder">📄 ${escHtml(c.fileName||'PDF')}</div>`;
-      return `<img src="${c.filePath}" alt="">`;
-    case 'text':
-    case 'disaster':
-      return `<div style="position:absolute;inset:0;padding:8px;color:rgba(255,255,255,.85);font-size:14px;white-space:pre-wrap;word-break:break-all;overflow:hidden;">
-        ${escHtml(c.text||'') || `<span style="opacity:.4">${p.type==='disaster'?'速報':'テキスト'}なし</span>`}
-      </div>`;
-    case 'accident': {
-      const elapsed = Math.max(0, Math.floor((Date.now() - new Date(c.startDate||new Date()).getTime()) / 86400000));
-      return `<div class="accident-num">${elapsed.toLocaleString()}<br><span style="font-size:.5em;opacity:.7">日</span></div>`;
-    }
-    case 'notice': {
-      const active = (c.notices||[]).filter(n => {
-        const t = new Date(); t.setHours(0,0,0,0);
-        if (n.startDate && new Date(n.startDate) > t) return false;
-        if (n.endDate   && new Date(n.endDate)   < t) return false;
-        return true;
-      });
-      if (!active.length) return `<div class="placeholder">📢 告知なし</div>`;
-      return `<div style="padding:4px;width:100%;overflow:hidden;">${active.slice(0,3).map(n=>
-        `<div style="font-size:9px;color:rgba(255,255,255,.8);border-left:2px solid #4fc3f7;padding:1px 4px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          ${escHtml(n.title||n.text||'')}
-        </div>`).join('')}</div>`;
-    }
-    case 'responsible': {
-      const role = escHtml(c.role || '化学物質管理者');
-      const name = escHtml(c.name || '');
-      const fs   = (c.fontSize || 40) + 'px';
-      return `<div style="display:flex;width:100%;height:100%;background:#FFD700;">
-        <div style="flex:1;background:#fff;margin:8%;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#111;overflow:hidden;border:2px solid #e0b800;">${name}</div>
-        <div style="writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#111;padding:6% 5% 6% 2%;white-space:nowrap;align-self:stretch;">${role}</div>
-      </div>`;
-    }
-    default: return '';
-  }
-}
+// panelBodyHtml は PanelRender に移行したため削除
 
 // ---- ドラッグ & リサイズ ----
 function setupDragResize(el, panelData) {
@@ -562,24 +503,54 @@ function updateCoordDisplay(p) {
 
 function updateInfoCard(p) {
   const pg = pages.find(pg => pg.page_number === (p.page || 1));
+  const layer = p.sort_order ?? 0;
   document.getElementById('infoCard').innerHTML = `
     <div class="info-row"><label>種別</label><b>${TYPE_LABELS[p.type]||p.type}</b></div>
     <div class="info-row"><label>ページ</label><b>${escHtml(pg?.page_name || String(p.page||1))}</b></div>
     <div class="info-row"><label>X</label><b>${p.x} px</b></div>
     <div class="info-row"><label>Y</label><b>${p.y} px</b></div>
     <div class="info-row"><label>幅</label><b>${p.width} px</b></div>
-    <div class="info-row"><label>高さ</label><b>${p.height} px</b></div>`;
+    <div class="info-row"><label>高さ</label><b>${p.height} px</b></div>
+    <div class="info-row"><label>レイヤー</label><b id="layerVal">${layer}</b></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <button class="btn btn-secondary btn-sm" style="flex:1" onclick="moveLayer('${p.id}', 1)">▲ 前面へ</button>
+      <button class="btn btn-secondary btn-sm" style="flex:1" onclick="moveLayer('${p.id}', -1)">▼ 背面へ</button>
+    </div>`;
 }
 
-// ---- サイドリスト（現在ページのみ） ----
+function moveLayer(id, dir) {
+  const pagePanels = panels
+    .filter(p => (p.page||1) === currentPage)
+    .sort((a, b) => (a.sort_order??0) - (b.sort_order??0));
+  const idx = pagePanels.findIndex(p => p.id === id);
+  if (idx < 0) return;
+  const swapIdx = idx + dir;
+  if (swapIdx < 0 || swapIdx >= pagePanels.length) return;
+  const a = pagePanels[idx], b = pagePanels[swapIdx];
+  const tmp = a.sort_order ?? idx;
+  a.sort_order = b.sort_order ?? swapIdx;
+  b.sort_order = tmp;
+  renderBoard();
+  renderSideList();
+  selectPanel(id);
+}
+
+// ---- サイドリスト（レイヤー順・番号付き） ----
 function renderSideList() {
-  const pagePanels = panels.filter(p => (p.page || 1) === currentPage);
+  const pagePanels = panels
+    .filter(p => (p.page || 1) === currentPage)
+    .slice()
+    .sort((a, b) => (b.sort_order ?? 0) - (a.sort_order ?? 0)); // 上が前面
   document.getElementById('sidePanelList').innerHTML = pagePanels.length
-    ? pagePanels.map(p => `
-        <div class="side-panel-item" data-id="${p.id}" onclick="selectPanel('${p.id}')">
+    ? pagePanels.map((p, i) => {
+        const layerNum = pagePanels.length - i; // 前面=大きい番号
+        return `
+        <div class="side-panel-item ${p.id === activeId ? 'active' : ''}" data-id="${p.id}" onclick="selectPanel('${p.id}')">
+          <span class="layer-badge" title="レイヤー ${layerNum}">${layerNum}</span>
           <span>${TYPE_ICONS[p.type]||'□'}</span>
           <span class="name">${escHtml(p.title || TYPE_LABELS[p.type]||p.type)}</span>
-        </div>`).join('')
+        </div>`;
+      }).join('')
     : `<div style="font-size:12px;color:var(--text-dim);padding:8px;">このページにパネルがありません</div>`;
 }
 
