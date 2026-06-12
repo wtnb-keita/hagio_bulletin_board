@@ -163,7 +163,6 @@ $appBase = rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROO
 }
 .type-btn:hover    { border-color: var(--accent); }
 .type-btn.selected { border-color: var(--accent); background: rgba(233,69,96,0.1); }
-.type-btn.type-disaster.selected { border-color: #f44336; background: rgba(244,67,54,0.1); }
 .type-btn .icon    { font-size: 26px; }
 .type-btn .label   { font-weight: bold; }
 .type-btn .desc    { font-size: 11px; color: var(--text-dim); text-align: center; }
@@ -277,11 +276,6 @@ $appBase = rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROO
                 <span class="icon">🪧</span>
                 <span class="label">責任者掲示</span>
                 <span class="desc">管理者名を縦書きで<br>表示するパネル</span>
-            </button>
-            <button class="type-btn type-disaster" data-type="disaster" onclick="Admin.selectType(this)">
-                <span class="icon">🚨</span>
-                <span class="label">災害速報</span>
-                <span class="desc">○○会災害速報を表示するパネル<br>（画像・PDF・テキスト複数対応）</span>
             </button>
             <button class="type-btn" data-type="hazard" onclick="Admin.selectType(this)">
                 <span class="icon">⚠️</span>
