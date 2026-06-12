@@ -30,6 +30,7 @@ body {
 
 /* ===== ヘッダー ===== */
 #header {
+  position: relative;
   height: 52px;
   background: #1a4f72;
   border-bottom: 4px solid #e94560;
@@ -54,7 +55,7 @@ body {
 #header .cross::before { width: 34%; height: 100%; left: 33%; top: 0; }
 #header .cross::after  { width: 100%; height: 34%; left: 0; top: 33%; }
 #header h1     { font-size: 24px; font-weight: bold; color: #fff; letter-spacing: .06em; }
-#header #clock { margin-left: auto; font-size: 13px; color: rgba(255,255,255,.7); }
+#header #clock { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); font-size: 13px; color: rgba(255,255,255,.7); }
 
 /* ===== スライド ===== */
 #slideshow { position: relative; }
