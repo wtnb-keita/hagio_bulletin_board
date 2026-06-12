@@ -59,6 +59,7 @@ if ($method === 'GET') {
             'width'        => (int)$row['width'],
             'height'       => (int)$row['height'],
             'page'         => isset($row['page_number']) ? (int)$row['page_number'] : 1,
+            'sort_order'   => isset($row['sort_order']) ? (int)$row['sort_order'] : 0,
             'content'      => [],
         ];
 
@@ -240,7 +241,7 @@ if ($method === 'POST') {
                 $p['title'] ?? '',
                 $p['x'] ?? 0, $p['y'] ?? 0,
                 $p['width'] ?? 300, $p['height'] ?? 200,
-                $i,
+                $p['sort_order'] ?? $i,
                 $p['page'] ?? 1,
                 isset($p['titleVisible']) ? ($p['titleVisible'] ? 1 : 0) : 1,
             ]);

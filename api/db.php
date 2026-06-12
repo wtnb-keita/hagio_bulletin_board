@@ -95,6 +95,7 @@ function fetchPanels(string $boardKey): array {
             'width'        => (int)$row['width'],
             'height'       => (int)$row['height'],
             'page'         => isset($row['page_number']) ? (int)$row['page_number'] : 1,
+            'sort_order'   => isset($row['sort_order']) ? (int)$row['sort_order'] : 0,
             'content'      => [],
         ];
 
