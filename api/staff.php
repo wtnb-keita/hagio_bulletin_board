@@ -9,6 +9,15 @@ $method   = $_SERVER['REQUEST_METHOD'];
 $boardKey = $_GET['board'] ?? 'staff_board';
 $action   = $_GET['action'] ?? '';
 
+// ---- GET: 更新タイムスタンプチェック ----
+if ($method === 'GET' && isset($_GET['check'])) {
+    $pdo  = getPDO();
+    $stmt = $pdo->prepare('SELECT MAX(updated_at) AS ts FROM staff WHERE board_key = ?');
+    $stmt->execute([$boardKey]);
+    $row  = $stmt->fetch();
+    jsonResponse(['ts' => $row['ts'] ?? '']);
+}
+
 // ---- GET: スタッフ一覧取得 ----
 if ($method === 'GET') {
     $pdo  = getPDO();
@@ -35,6 +44,7 @@ if ($method === 'GET') {
             'id'             => (int)$row['id'],
             'name'           => $row['name'],
             'department'     => $row['department'],
+            'jobType'        => $row['job_type'] ?? '',
             'photoPath'      => $photoPath,
             'qualifications' => $quals,
             'sortOrder'      => (int)$row['sort_order'],
@@ -60,6 +70,7 @@ if ($method === 'POST') {
             foreach ($body['staff'] as $i => $s) {
                 $name       = trim($s['name'] ?? '');
                 $department = trim($s['department'] ?? '');
+                $jobType    = trim($s['jobType'] ?? '');
                 $photoPath  = trim($s['photoPath'] ?? '');
                 $quals      = $s['qualifications'] ?? [];
 
@@ -71,10 +82,10 @@ if ($method === 'POST') {
                 }
 
                 $ins = $pdo->prepare(
-                    'INSERT INTO staff (board_key, name, department, photo_path, sort_order)
-                     VALUES (?, ?, ?, ?, ?)'
+                    'INSERT INTO staff (board_key, name, department, job_type, photo_path, sort_order)
+                     VALUES (?, ?, ?, ?, ?, ?)'
                 );
-                $ins->execute([$boardKey, $name, $department, $photoPath, $i]);
+                $ins->execute([$boardKey, $name, $department, $jobType, $photoPath, $i]);
                 $staffId = (int)$pdo->lastInsertId();
 
                 foreach ($quals as $qi => $qname) {

@@ -78,8 +78,8 @@ $sqls = [
             sort_order  INT NOT NULL DEFAULT 0
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ",
-    'panels.type に disaster/responsible を追加' => "
-        ALTER TABLE panels MODIFY COLUMN type ENUM('media','text','accident','notice','disaster','responsible') NOT NULL
+    'panels.type に disaster/responsible/hazard/label を追加' => "
+        ALTER TABLE panels MODIFY COLUMN type ENUM('media','text','accident','notice','disaster','responsible','hazard','label') NOT NULL
     ",
     'staff テーブル作成' => "
         CREATE TABLE IF NOT EXISTS staff (
@@ -101,7 +101,29 @@ $sqls = [
             sort_order  INT NOT NULL DEFAULT 0
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ",
+    'staff に job_type カラム追加' => "
+        ALTER TABLE staff ADD COLUMN job_type VARCHAR(255) DEFAULT '' AFTER department
+    ",
+    'staff_job_types テーブル作成' => "
+        CREATE TABLE IF NOT EXISTS staff_job_types (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            board_key   VARCHAR(64) NOT NULL DEFAULT 'staff_board',
+            name        VARCHAR(255) NOT NULL,
+            sort_order  INT NOT NULL DEFAULT 0,
+            created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ",
+    'staff_qual_masters テーブル作成' => "
+        CREATE TABLE IF NOT EXISTS staff_qual_masters (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            board_key   VARCHAR(64) NOT NULL DEFAULT 'staff_board',
+            name        VARCHAR(255) NOT NULL,
+            sort_order  INT NOT NULL DEFAULT 0,
+            created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ",
     'boards 初期データ投入 No.1' => "
+
         INSERT IGNORE INTO boards (board_key, name, width, height)
         VALUES ('safety_board_1', '安全掲示板 No.1', 1800, 900)
     ",

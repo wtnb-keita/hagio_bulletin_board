@@ -5,17 +5,27 @@ $baseUrl = rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROO
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1800">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>安全資格者掲示板</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* 画面全体を黒背景で埋め、ボードを中央にスケール表示 */
 body {
-  background: #e8edf3;
-  width: 1800px;
-  height: 900px;
+  background: #111;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
   font-family: 'Meiryo', 'Yu Gothic', sans-serif;
+}
+
+#board {
+  position: fixed;
+  top: 50%; left: 50%;
+  margin: 0;
+  background: #e8edf3;
+  transform-origin: center;
+  overflow: hidden;
 }
 
 /* ===== ヘッダー ===== */
@@ -25,13 +35,13 @@ body {
   border-bottom: 4px solid #e94560;
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 0 24px;
   gap: 10px;
 }
 #header .cross {
   position: relative;
-  width: 28px;
-  height: 28px;
+  width: 28px; height: 28px;
   flex-shrink: 0;
 }
 #header .cross::before,
@@ -43,24 +53,19 @@ body {
 }
 #header .cross::before { width: 34%; height: 100%; left: 33%; top: 0; }
 #header .cross::after  { width: 100%; height: 34%; left: 0; top: 33%; }
-#header h1       { font-size: 24px; font-weight: bold; color: #fff; letter-spacing: .06em; }
-#header #clock   { margin-left: auto; font-size: 13px; color: rgba(255,255,255,.7); }
+#header h1     { font-size: 24px; font-weight: bold; color: #fff; letter-spacing: .06em; }
+#header #clock { margin-left: auto; font-size: 13px; color: rgba(255,255,255,.7); }
 
-/* ===== グリッド ===== */
-#grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  gap: 10px;
-  padding: 10px 14px;
-  height: calc(900px - 52px);
-}
+/* ===== スライド ===== */
+#slideshow { position: relative; }
+.staff-slide { display: none; }
+.staff-slide.active { display: grid; }
 
 /* ===== カード ===== */
 .card {
   background: #fff;
-  border: 1px solid #b8cfe0;
-  border-radius: 8px;
+  border: 3px solid #f5c518;
+  border-radius: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -69,238 +74,182 @@ body {
 .card-empty {
   background: rgba(255,255,255,.35);
   border: 1px dashed #b8cfe0;
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
-/* --- 上段：写真エリア（カード高さの50%） --- */
+/* 上部：黄色枠 */
+.card-yellow-corner {
+  flex-shrink: 0;
+}
 .card-top {
-  flex: 0 0 50%;
   display: flex;
-  min-height: 0;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  background: #fffde7;
+  min-height: 130px;
 }
 
-/* 大きい写真（左 60%） */
+/* 写真 */
 .card-photo {
-  flex: 0 0 62%;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  border-radius: 8px;
   overflow: hidden;
   background: #d0e0ef;
 }
 .card-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
 }
 .card-photo-none {
-  width: 100%;
-  height: 100%;
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; color: #8aaec8;
+}
+
+/* 右側情報 */
+.card-top-info {
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 44px;
-  color: #8aaec8;
-}
-
-/* 右サイド（右 38%） */
-.card-side {
-  flex: 1;
-  background: #f2f7fc;
-  border-left: 1px solid #b8cfe0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 4px 6px;
-  gap: 8px;
-}
-.badge-anzen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-}
-.safety-cross {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-}
-.safety-cross::before,
-.safety-cross::after {
-  content: '';
-  position: absolute;
-  background: #2ecc40;
-  border-radius: 2px;
-}
-.safety-cross::before {
-  width: 34%;
-  height: 100%;
-  left: 33%;
-  top: 0;
-}
-.safety-cross::after {
-  width: 100%;
-  height: 34%;
-  left: 0;
-  top: 33%;
-}
-.badge-anzen-text {
-  font-size: 9px;
-  font-weight: bold;
-  color: #1a4f72;
-  letter-spacing: .03em;
-  white-space: nowrap;
-}
-.card-avatar {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid #fff;
-  background: #c0d4e5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  color: #7a9ab5;
-  flex-shrink: 0;
-}
-.card-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.card-blood {
-  font-size: 13px;
-  font-weight: bold;
-  color: #1a4f72;
-  text-align: center;
-  line-height: 1.2;
-}
-.card-blood-label {
-  font-size: 9px;
-  color: #7a8d9e;
-  text-align: center;
-}
-
-/* --- 下段：情報エリア（残り50%） --- */
-.card-bottom {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 7px 9px 6px;
-  min-height: 0;
-}
-
-/* 名前・部署 行 */
-.card-name-row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 5px;
-  flex-shrink: 0;
-}
-.card-name {
-  font-size: 19px;
-  font-weight: bold;
-  color: #1a2e40;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
   min-width: 0;
 }
-.card-dept {
-  font-size: 10px;
-  color: #7a8d9e;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 0;
-  max-width: 46%;
-}
-
-/* 資格エリア（固定・overflow hidden） */
-.card-qual-label {
-  font-size: 10px;
-  color: #7a8d9e;
-  margin-bottom: 4px;
-  flex-shrink: 0;
-}
-.card-quals {
-  flex: 1;
+.badge-anzen {
+  align-self: center;
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 3px;
-  overflow: hidden;
+  align-items: center;
+  gap: 8px;
+  color: #2e7d32;
+  font-size: 20px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.safety-cross { position: relative; width: 32px; height: 32px; flex-shrink: 0; }
+.safety-cross::before,
+.safety-cross::after {
+  content: ''; position: absolute;
+  background: #2ecc40; border-radius: 2px;
+}
+.safety-cross::before { width: 34%; height: 100%; left: 33%; top: 0; }
+.safety-cross::after  { width: 100%; height: 34%; left: 0; top: 33%; }
+
+/* カード下部 */
+.card-body {
+  flex: 1;
+  display: flex; flex-direction: column;
+  padding: 8px 10px 6px;
+  min-height: 0;
+}
+.card-basic-info {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+.card-basic-info > div {
+  display: flex;
+  gap: 20px;
+}
+.card-basic-info > div:first-child {
+  margin-bottom: 4px;
+}
+.card-basic-info > div:first-child .card-info-label {
+  flex: 1;
+}
+.card-basic-info > div:first-child .card-info-label:last-child {
+  flex: 0 0 auto;
+}
+.card-basic-info > div:last-child .card-name {
+  flex: 1;
+}
+.card-basic-info > div:last-child .card-blood {
+  flex: 0 0 auto;
+}
+.card-info-label { font-size: 10px; color: #666; margin-bottom: 1px; }
+.card-name {
+  font-size: 18px; font-weight: 700; color: #1a2e40;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-name-row { display: flex; align-items: baseline; gap: 10px; }
+.card-name-row .card-name { flex: 1; }
+.card-blood    { font-size: 16px; font-weight: 700; color: #c62828; margin-left: auto; white-space: nowrap; }
+.card-job-type { margin-top: 16px; font-size: 16px; font-weight: 600; color: #1a4f72; background: #dceeff; border-radius: 4px; padding: 4px 12px; white-space: nowrap; }
+.card-qual-label { font-size: 13px; font-weight: 700; margin-bottom: 6px; flex-shrink: 0; }
+.card-quals {
+  flex: 1; display: flex; flex-wrap: wrap;
+  align-content: flex-start; gap: 6px; overflow: hidden;
 }
 .qual {
-  background: #fde8ec;
-  border: 1px solid #f2a0b0;
-  color: #b52840;
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  white-space: nowrap;
-  line-height: 1.4;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #eef6ff;
+  border: 1px solid #c5daf7;
+  color: #1a4f72;
+  font-size: 13px;
+  white-space: nowrap; line-height: 1.5;
 }
+
+/* ===== ページナビ ===== */
+#slide-nav {
+  display: none;
+  position: absolute;
+  bottom: 14px; left: 50%;
+  transform: translateX(-50%);
+  gap: 10px;
+  z-index: 9999;
+  background: rgba(0,0,0,.35);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+.slide-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: rgba(255,255,255,.35);
+  border: 2px solid rgba(255,255,255,.7);
+  cursor: pointer; padding: 0;
+  transition: background .25s, transform .2s;
+}
+.slide-dot.active { background: #fff; transform: scale(1.25); }
+.slide-dot:hover  { background: rgba(255,255,255,.7); }
 </style>
 </head>
 <body>
 
-<div id="header">
-  <span class="cross"></span>
-  <h1 id="title">安全資格者掲示板</h1>
-  <div id="clock"></div>
+<div id="board">
+  <div id="header">
+    <span class="cross"></span>
+    <h1 id="title">安全資格者掲示板</h1>
+    <div id="clock"></div>
+  </div>
+  <div id="slideshow"></div>
+  <div id="slide-nav"></div>
 </div>
-
-<div id="slideshow"></div>
-
-<!-- ページナビ -->
-<div id="slide-nav" style="
-  display:none;
-  position:fixed;
-  bottom:14px;
-  left:50%;
-  transform:translateX(-50%);
-  gap:10px;
-  z-index:9999;
-  background:rgba(0,0,0,.35);
-  padding:6px 12px;
-  border-radius:20px;
-">
-</div>
-<style>
-#slideshow { position:relative; width:100%; }
-.staff-slide { display:none; }
-.staff-slide.active { display:grid; }
-.slide-dot {
-  width:12px; height:12px; border-radius:50%;
-  background:rgba(255,255,255,.35);
-  border:2px solid rgba(255,255,255,.7);
-  cursor:pointer; padding:0;
-  transition:background .25s, transform .2s;
-}
-.slide-dot.active { background:#fff; transform:scale(1.25); }
-.slide-dot:hover  { background:rgba(255,255,255,.7); }
-</style>
 
 <script>
 const BASE_URL  = '<?= $baseUrl ?>';
 const BOARD_KEY = 'staff_board';
 
-/* ===== ボード設定 ===== */
-async function loadConfig() {
-  try {
-    const r   = await fetch(`${BASE_URL}/api/boards.php?board=${BOARD_KEY}`);
-    const cfg = await r.json();
-    if (cfg.name) document.getElementById('title').textContent = cfg.name;
-    const w = cfg.width  || 1800;
-    const h = cfg.height || 900;
-    document.body.style.cssText += `;width:${w}px;height:${h}px`;
-    document.querySelector('meta[name=viewport]').content = `width=${w}`;
-    document.getElementById('grid').style.height = (h - 52) + 'px';
-  } catch(e) {}
+const COLS     = 5;
+const ROWS     = 2;
+const PER_PAGE = COLS * ROWS;
+
+let _pages    = [];
+let _curSlide = 0;
+let _ssTimer  = null;
+let _boardCfg = { slideshow_enabled: false, slideshow_interval: 10 };
+let _boardW   = 1800;
+let _boardH   = 900;
+
+/* ===== スケール適用 ===== */
+function applyScale() {
+  const scale = Math.min(window.innerWidth / _boardW, window.innerHeight / _boardH);
+  const board = document.getElementById('board');
+  board.style.width     = _boardW + 'px';
+  board.style.height    = _boardH + 'px';
+  board.style.transform = `translate(-50%, -50%) scale(${scale})`;
 }
 
 /* ===== HTML エスケープ ===== */
@@ -308,7 +257,7 @@ function eh(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ===== カードHTML生成 ===== */
+/* ===== カード生成 ===== */
 function buildCard(s) {
   const photoHtml = s.photoPath
     ? `<img src="${eh(s.photoPath)}" alt="${eh(s.name)}">`
@@ -320,58 +269,59 @@ function buildCard(s) {
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
-    <div class="card-top">
-      <div class="card-photo">${photoHtml}</div>
-      <div class="card-side">
-        <div class="badge-anzen">
-          <div class="safety-cross"></div>
-          <div class="badge-anzen-text">安全第一</div>
+    <div class="card-yellow-corner">
+      <div class="card-top">
+        <div class="card-photo">${photoHtml}</div>
+        <div class="card-top-info">
+          <div class="badge-anzen"><div class="safety-cross"></div>安全第一</div>
+          ${s.jobType ? `<div class="card-job-type">職種：${eh(s.jobType)}</div>` : ''}
         </div>
-        ${s.department ? `<div class="card-blood-label">血液型</div><div class="card-blood">${eh(s.department)}</div>` : ''}
       </div>
     </div>
-    <div class="card-bottom">
-      <div class="card-name-row"><div class="card-name">${eh(s.name)}</div></div>
-      ${qualSection}
+    <div class="card-body">
+      <div class="card-basic-info">
+        <div>
+          <div class="card-info-label">名前</div>
+          ${s.department ? `<div class="card-info-label">血液型</div>` : ''}
+        </div>
+        <div>
+          <div class="card-name">${eh(s.name)}</div>
+          ${s.department ? `<div class="card-blood">${eh(s.department)}</div>` : ''}
+        </div>
+      </div>
+      ${quals ? `<div class="card-qual-label">保有資格</div><div class="card-quals">${quals}</div>` : ''}
     </div>`;
   return card;
 }
 
-/* ===== スライドショー状態 ===== */
-let _pages   = [];
-let _curSlide = 0;
-let _ssTimer  = null;
-let _boardCfg = { slideshow_enabled: false, slideshow_interval: 10 };
-
 /* ===== スライド描画 ===== */
 function renderSlides(list) {
-  const COLS = 4, ROWS = 3, PER_PAGE = COLS * ROWS;
+  const pageCount = Math.max(1, Math.ceil(list.length / PER_PAGE));
+  if (_curSlide >= pageCount) _curSlide = 0;
+
   _pages = [];
   for (let i = 0; i < list.length; i += PER_PAGE) {
     _pages.push(list.slice(i, i + PER_PAGE));
   }
   if (_pages.length === 0) _pages.push([]);
 
-  const ss = document.getElementById('slideshow');
+  const ss     = document.getElementById('slideshow');
+  const slideH = _boardH - 52;
   ss.innerHTML = '';
+  ss.style.height = slideH + 'px';
 
   _pages.forEach((pageStaff, pi) => {
     const slide = document.createElement('div');
     slide.className = `staff-slide${pi === _curSlide ? ' active' : ''}`;
     slide.style.cssText = `
+      height:${slideH}px;
       grid-template-columns:repeat(${COLS},1fr);
       grid-template-rows:repeat(${ROWS},1fr);
       gap:10px;
       padding:10px 14px;
     `;
     for (let i = 0; i < PER_PAGE; i++) {
-      if (pageStaff[i]) {
-        slide.appendChild(buildCard(pageStaff[i]));
-      } else {
-        const empty = document.createElement('div');
-        empty.className = 'card card-empty';
-        slide.appendChild(empty);
-      }
+      slide.appendChild(pageStaff[i] ? buildCard(pageStaff[i]) : Object.assign(document.createElement('div'), { className: 'card card-empty' }));
     }
     ss.appendChild(slide);
   });
@@ -416,18 +366,16 @@ async function refresh() {
   } catch(e) { console.error(e); }
 }
 
-/* ===== ボード設定（サイズ + スライドショー） ===== */
+/* ===== ボード設定 ===== */
 async function loadConfig() {
   try {
     const r   = await fetch(`${BASE_URL}/api/boards.php?board=${BOARD_KEY}`);
     const cfg = await r.json();
     _boardCfg = cfg;
+    _boardW   = cfg.width  || 1800;
+    _boardH   = cfg.height || 900;
     if (cfg.name) document.getElementById('title').textContent = cfg.name;
-    const w = cfg.width  || 1800;
-    const h = cfg.height || 900;
-    document.body.style.cssText += `;width:${w}px;height:${h}px`;
-    document.querySelector('meta[name=viewport]').content = `width=${w}`;
-    document.getElementById('slideshow').style.height = (h - 52) + 'px';
+    applyScale();
   } catch(e) {}
 }
 
@@ -438,12 +386,27 @@ function tick() {
     `${n.getFullYear()}/${p(n.getMonth()+1)}/${p(n.getDate())} ${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
 }
 
+window.addEventListener('resize', applyScale);
+
 (async () => {
   await loadConfig();
   await refresh();
   tick();
   setInterval(tick, 1000);
-  setInterval(refresh, 60000);
+
+  let _lastTs = '';
+  async function checkUpdate() {
+    try {
+      const r   = await fetch(`${BASE_URL}/api/staff.php?board=${BOARD_KEY}&check=1`);
+      const d   = await r.json();
+      if (d.ts && d.ts !== _lastTs) {
+        if (_lastTs !== '') await refresh();
+        _lastTs = d.ts;
+      }
+    } catch(e) {}
+  }
+  await checkUpdate();
+  setInterval(checkUpdate, 3000);
 })();
 </script>
 </body>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>スタッフカード</title>
+
+    <style>
+        .worker-card {
+            width: 320px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .card-top {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .photo {
+            width: 110px;
+            height: 110px;
+            flex-shrink: 0;
+        }
+
+        .photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .top-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .safety {
+            align-self: flex-end;
+            background: #2e7d32;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .job .label,
+        .basic-info .label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .job .value {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .card-body {
+            padding: 15px;
+        }
+
+        .basic-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .basic-info .value {
+            font-weight: 600;
+        }
+
+        .blood {
+            font-size: 20px;
+            font-weight: 700;
+            color: #c62828;
+        }
+
+        .qualification-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .qualifications {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .qualifications span {
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: #eef6ff;
+            border: 1px solid #c5daf7;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="worker-card">
+
+        <div class="card-top">
+
+            <div class="photo">
+                <img src="staff.jpg" alt="">
+            </div>
+
+            <div class="top-info">
+
+                <div class="safety">
+                    ＋ 安全第一
+                </div>
+
+                <div class="job">
+                    <div class="label">職種</div>
+                    <div class="value">溶接工</div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="basic-info">
+
+                <div>
+                    <div class="label">名前</div>
+                    <div class="value">山田 太郎</div>
+                </div>
+
+                <div>
+                    <div class="label">血液型</div>
+                    <div class="value blood">A型</div>
+                </div>
+
+            </div>
+
+            <div class="qualification-title">
+                保有資格
+            </div>
+
+            <div class="qualifications">
+                <span>玉掛け</span>
+                <span>フォークリフト</span>
+                <span>高所作業車</span>
+                <span>アーク溶接</span>
+                <span>クレーン</span>
+                <span>研削砥石</span>
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>
