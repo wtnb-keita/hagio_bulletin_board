@@ -32,15 +32,16 @@ if ($method === 'GET') {
         $type = $row['type'];
 
         $panel = [
-            'id'     => $uid,
-            'type'   => $type,
-            'title'  => $row['title'],
-            'x'      => (int)$row['pos_x'],
-            'y'      => (int)$row['pos_y'],
-            'width'  => (int)$row['width'],
-            'height' => (int)$row['height'],
-            'page'   => isset($row['page_number']) ? (int)$row['page_number'] : 1,
-            'content'=> [],
+            'id'           => $uid,
+            'type'         => $type,
+            'title'        => $row['title'],
+            'titleVisible' => isset($row['title_visible']) ? (bool)$row['title_visible'] : true,
+            'x'            => (int)$row['pos_x'],
+            'y'            => (int)$row['pos_y'],
+            'width'        => (int)$row['width'],
+            'height'       => (int)$row['height'],
+            'page'         => isset($row['page_number']) ? (int)$row['page_number'] : 1,
+            'content'      => [],
         ];
 
         switch ($type) {
@@ -131,6 +132,30 @@ if ($method === 'GET') {
                     'fontSize' => isset($d['font_size']) ? (int)$d['font_size'] : 40,
                 ] : ['role' => '化学物質管理者', 'name' => '', 'fontSize' => 40];
                 break;
+
+            case 'hazard':
+                $s = $pdo->prepare('SELECT content FROM panel_text WHERE panel_uid=? AND board_key=?');
+                $s->execute([$uid, $boardKey]);
+                $d = $s->fetch();
+                if ($d && $d['content']) {
+                    $decoded = json_decode($d['content'], true);
+                    $panel['content'] = is_array($decoded) ? $decoded : ['borderWidth'=>30,'stripeSize'=>30,'color1'=>'#FFD700','color2'=>'#000000','innerBg'=>'#ffffff','text'=>'','fontSize'=>24,'textColor'=>'#000000'];
+                } else {
+                    $panel['content'] = ['borderWidth'=>30,'stripeSize'=>30,'color1'=>'#FFD700','color2'=>'#000000','innerBg'=>'#ffffff','text'=>'','fontSize'=>24,'textColor'=>'#000000'];
+                }
+                break;
+
+            case 'label':
+                $s = $pdo->prepare('SELECT content FROM panel_text WHERE panel_uid=? AND board_key=?');
+                $s->execute([$uid, $boardKey]);
+                $d = $s->fetch();
+                if ($d && $d['content']) {
+                    $decoded = json_decode($d['content'], true);
+                    $panel['content'] = is_array($decoded) ? $decoded : ['text'=>'', 'textColor'=>'#ffffff', 'bgColor'=>'#e94560', 'fontSize'=>24, 'textAlign'=>'center', 'bold'=>true];
+                } else {
+                    $panel['content'] = ['text'=>'', 'textColor'=>'#ffffff', 'bgColor'=>'#e94560', 'fontSize'=>24, 'textAlign'=>'center', 'bold'=>true];
+                }
+                break;
         }
 
         $result[] = $panel;
@@ -170,14 +195,15 @@ if ($method === 'POST') {
             $type = $p['type'];
 
             $pdo->prepare(
-                'INSERT INTO panels (board_key, panel_uid, type, title, pos_x, pos_y, width, height, sort_order, page_number)
-                 VALUES (?,?,?,?,?,?,?,?,?,?)
+                'INSERT INTO panels (board_key, panel_uid, type, title, pos_x, pos_y, width, height, sort_order, page_number, title_visible)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?)
                  ON DUPLICATE KEY UPDATE
                    type=VALUES(type), title=VALUES(title),
                    pos_x=VALUES(pos_x), pos_y=VALUES(pos_y),
                    width=VALUES(width), height=VALUES(height),
                    sort_order=VALUES(sort_order),
-                   page_number=VALUES(page_number)'
+                   page_number=VALUES(page_number),
+                   title_visible=VALUES(title_visible)'
             )->execute([
                 $boardKey, $uid, $type,
                 $p['title'] ?? '',
@@ -185,6 +211,7 @@ if ($method === 'POST') {
                 $p['width'] ?? 300, $p['height'] ?? 200,
                 $i,
                 $p['page'] ?? 1,
+                isset($p['titleVisible']) ? ($p['titleVisible'] ? 1 : 0) : 1,
             ]);
 
             $c = $p['content'] ?? [];
@@ -256,6 +283,44 @@ if ($method === 'POST') {
                         $c['role']     ?? '化学物質管理者',
                         $c['name']     ?? '',
                         $c['fontSize'] ?? 40,
+                    ]);
+                    break;
+
+                case 'hazard':
+                    $pdo->prepare(
+                        'INSERT INTO panel_text (panel_uid, board_key, content, vertical, font_size)
+                         VALUES (?,?,?,0,0)
+                         ON DUPLICATE KEY UPDATE content=VALUES(content)'
+                    )->execute([
+                        $uid, $boardKey,
+                        json_encode([
+                            'borderWidth' => $c['borderWidth'] ?? 30,
+                            'stripeSize'  => $c['stripeSize']  ?? 30,
+                            'color1'      => $c['color1']      ?? '#FFD700',
+                            'color2'      => $c['color2']      ?? '#000000',
+                            'innerBg'     => $c['innerBg']     ?? '#ffffff',
+                            'text'        => $c['text']        ?? '',
+                            'fontSize'    => $c['fontSize']    ?? 24,
+                            'textColor'   => $c['textColor']   ?? '#000000',
+                        ], JSON_UNESCAPED_UNICODE),
+                    ]);
+                    break;
+
+                case 'label':
+                    $pdo->prepare(
+                        'INSERT INTO panel_text (panel_uid, board_key, content, vertical, font_size)
+                         VALUES (?,?,?,0,0)
+                         ON DUPLICATE KEY UPDATE content=VALUES(content)'
+                    )->execute([
+                        $uid, $boardKey,
+                        json_encode([
+                            'text'      => $c['text']      ?? '',
+                            'textColor' => $c['textColor'] ?? '#ffffff',
+                            'bgColor'   => $c['bgColor']   ?? '#e94560',
+                            'fontSize'  => $c['fontSize']  ?? 24,
+                            'textAlign' => $c['textAlign'] ?? 'center',
+                            'bold'      => $c['bold']      ?? true,
+                        ], JSON_UNESCAPED_UNICODE),
                     ]);
                     break;
 

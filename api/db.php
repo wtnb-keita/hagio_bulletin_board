@@ -65,7 +65,7 @@ function fetchPages(string $boardKey): array {
                 'sort_order'  => (int)$r['sort_order'],
             ], $rows);
         }
-    } catch (Throwable $e) { /* 未マイグレーション時は fallback */ }
+    } catch (Throwable) { /* 未マイグレーション時は fallback */ }
     return [['page_number' => 1, 'page_name' => 'ページ 1', 'sort_order' => 0]];
 }
 
@@ -86,15 +86,16 @@ function fetchPanels(string $boardKey): array {
         $uid  = $row['panel_uid'];
         $type = $row['type'];
         $panel = [
-            'id'      => $uid,
-            'type'    => $type,
-            'title'   => $row['title'],
-            'x'       => (int)$row['pos_x'],
-            'y'       => (int)$row['pos_y'],
-            'width'   => (int)$row['width'],
-            'height'  => (int)$row['height'],
-            'page'    => isset($row['page_number']) ? (int)$row['page_number'] : 1,
-            'content' => [],
+            'id'           => $uid,
+            'type'         => $type,
+            'title'        => $row['title'],
+            'titleVisible' => isset($row['title_visible']) ? (bool)$row['title_visible'] : true,
+            'x'            => (int)$row['pos_x'],
+            'y'            => (int)$row['pos_y'],
+            'width'        => (int)$row['width'],
+            'height'       => (int)$row['height'],
+            'page'         => isset($row['page_number']) ? (int)$row['page_number'] : 1,
+            'content'      => [],
         ];
 
         switch ($type) {
@@ -157,6 +158,32 @@ function fetchPanels(string $boardKey): array {
                     'name'     => $d['person_name'],
                     'fontSize' => isset($d['font_size']) ? (int)$d['font_size'] : 40,
                 ] : ['role' => '化学物質管理者', 'name' => '', 'fontSize' => 40];
+                break;
+
+            case 'hazard':
+                $s = $pdo->prepare('SELECT content FROM panel_text WHERE panel_uid=? AND board_key=?');
+                $s->execute([$uid, $boardKey]);
+                $d = $s->fetch();
+                if ($d && $d['content']) {
+                    $decoded = json_decode($d['content'], true);
+                    $panel['content'] = is_array($decoded) ? $decoded : [];
+                }
+                if (empty($panel['content'])) {
+                    $panel['content'] = ['borderWidth'=>30,'stripeSize'=>30,'color1'=>'#FFD700','color2'=>'#000000','innerBg'=>'#ffffff','text'=>'','fontSize'=>24,'textColor'=>'#000000'];
+                }
+                break;
+
+            case 'label':
+                $s = $pdo->prepare('SELECT content FROM panel_text WHERE panel_uid=? AND board_key=?');
+                $s->execute([$uid, $boardKey]);
+                $d = $s->fetch();
+                if ($d && $d['content']) {
+                    $decoded = json_decode($d['content'], true);
+                    $panel['content'] = is_array($decoded) ? $decoded : [];
+                }
+                if (empty($panel['content'])) {
+                    $panel['content'] = ['text'=>'','textColor'=>'#ffffff','bgColor'=>'#e94560','fontSize'=>24,'textAlign'=>'center','bold'=>true];
+                }
                 break;
         }
         $result[] = $panel;

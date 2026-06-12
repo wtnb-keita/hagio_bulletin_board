@@ -153,6 +153,35 @@ const PanelRender = (() => {
     </div>`;
   }
 
+  function hazardBody(panel) {
+    const c  = panel.content || {};
+    const bw = c.borderWidth || 30;
+    const sz = c.stripeSize  || 30;
+    const c1 = c.color1  || '#FFD700';
+    const c2 = c.color2  || '#000000';
+    const bg = c.innerBg || '#ffffff';
+    const stripe = `repeating-linear-gradient(-45deg,${c1} 0px,${c1} ${sz}px,${c2} ${sz}px,${c2} ${sz*2}px)`;
+    const innerText = c.text
+      ? `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:${(c.fontSize||24)}px;font-weight:bold;color:${c.textColor||'#000000'};padding:8px;text-align:center;word-break:break-all;white-space:pre-wrap;">${escHtml(c.text)}</div>`
+      : '';
+    return `<div class="panel-body" style="padding:0;overflow:hidden;">
+      <div style="position:relative;width:100%;height:100%;background:${stripe};padding:${bw}px;box-sizing:border-box;">
+        <div style="width:100%;height:100%;background:${bg};overflow:hidden;">${innerText}</div>
+      </div>
+    </div>`;
+  }
+
+  function labelBody(panel) {
+    const c      = panel.content || {};
+    const tc     = c.textColor || '#ffffff';
+    const bg     = c.bgColor   || '#e94560';
+    const fs     = (c.fontSize || 24) + 'px';
+    const align  = c.textAlign || 'center';
+    const fw     = c.bold !== false ? 'bold' : 'normal';
+    const jc     = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
+    return `<div class="panel-body" style="display:flex;align-items:center;justify-content:${jc};background:${bg};color:${tc};font-size:${fs};font-weight:${fw};text-align:${align};padding:8px 16px;word-break:break-all;white-space:pre-wrap;">${escHtml(c.text || '')}</div>`;
+  }
+
   // ---- 公開API ----
 
   /**
@@ -160,6 +189,8 @@ const PanelRender = (() => {
    * @param {Object} panel
    * @returns {HTMLElement}
    */
+  const NO_TITLE_TYPES = new Set(['responsible', 'hazard', 'label']);
+
   function createPanelElement(panel) {
     const div = document.createElement('div');
     div.className = `panel panel-${panel.type}`;
@@ -168,7 +199,8 @@ const PanelRender = (() => {
     div.style.width  = `${panel.width  || 300}px`;
     div.style.height = `${panel.height || 200}px`;
 
-    const showTitle = panel.titleVisible !== undefined ? !!panel.titleVisible : !!panel.title;
+    const showTitle = !NO_TITLE_TYPES.has(panel.type) &&
+      (panel.titleVisible !== undefined ? !!panel.titleVisible : !!panel.title);
     const titleHtml = (showTitle && panel.title)
       ? `<div class="panel-title">${escHtml(panel.title)}</div>`
       : '';
@@ -180,6 +212,8 @@ const PanelRender = (() => {
       notice:      noticeBody,
       disaster:    disasterBody,
       responsible: responsibleBody,
+      hazard:      hazardBody,
+      label:       labelBody,
     }[panel.type]?.(panel) ?? '';
 
     div.innerHTML = titleHtml + bodyHtml;

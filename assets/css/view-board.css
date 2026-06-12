@@ -220,6 +220,20 @@ body {
   align-self: center;
 }
 
+/* ---- 警戒枠パネル ---- */
+.panel-hazard {
+  background: transparent;
+  border: none;
+}
+.panel-hazard .panel-body { padding: 0; }
+
+/* ---- カラーラベルパネル ---- */
+.panel-label {
+  background: transparent;
+  border: none;
+}
+.panel-label .panel-body { padding: 0; }
+
 /* ---- 汎用 ---- */
 .no-data { color: #555; font-size: 13px; padding: 12px; text-align: center; }
 

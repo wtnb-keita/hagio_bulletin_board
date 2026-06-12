@@ -330,11 +330,11 @@ let currentPage = 1;
 
 const TYPE_ICONS = {
   media:'🖼', text:'📝', accident:'🏆', notice:'📢',
-  responsible:'🪧', disaster:'🚨'
+  responsible:'🪧', disaster:'🚨', hazard:'⚠️', label:'🏷️'
 };
 const TYPE_LABELS = {
   media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知',
-  responsible:'責任者掲示', disaster:'災害速報'
+  responsible:'責任者掲示', disaster:'災害速報', hazard:'警戒枠', label:'カラーラベル'
 };
 
 // ---- ページタブ ----

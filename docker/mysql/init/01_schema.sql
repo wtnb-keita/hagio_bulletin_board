@@ -31,14 +31,15 @@ CREATE TABLE IF NOT EXISTS panels (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   board_key   VARCHAR(64) NOT NULL  COMMENT 'boards.board_key',
   panel_uid   VARCHAR(64) NOT NULL  COMMENT 'フロントが発行するユニークID',
-  type        VARCHAR(32) NOT NULL,
+  type        ENUM('media','text','accident','notice','disaster','responsible','hazard','label') NOT NULL,
   title       VARCHAR(255) DEFAULT '' COMMENT 'パネルヘッダー',
   pos_x       INT NOT NULL DEFAULT 0,
   pos_y       INT NOT NULL DEFAULT 0,
   width       INT NOT NULL DEFAULT 300,
   height      INT NOT NULL DEFAULT 200,
-  sort_order  INT NOT NULL DEFAULT 0,
-  page_number INT NOT NULL DEFAULT 1  COMMENT '所属ページ番号',
+  sort_order   INT        NOT NULL DEFAULT 0,
+  page_number  INT        NOT NULL DEFAULT 1  COMMENT '所属ページ番号',
+  title_visible TINYINT(1) NOT NULL DEFAULT 1  COMMENT '1=タイトル表示',
   created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_board_uid (board_key, panel_uid)
@@ -46,35 +47,40 @@ CREATE TABLE IF NOT EXISTS panels (
 
 -- ---- メディアパネル ----
 CREATE TABLE IF NOT EXISTS panel_media (
-  panel_uid   VARCHAR(64)  PRIMARY KEY,
+  panel_uid   VARCHAR(64)  NOT NULL,
   board_key   VARCHAR(64)  NOT NULL,
   file_name   VARCHAR(255) DEFAULT '',
   file_type   VARCHAR(64)  DEFAULT '',
   file_path   VARCHAR(512) DEFAULT '' COMMENT 'サーバー上のファイルパス',
-  label_text  TEXT         DEFAULT NULL COMMENT '画像下部ラベル'
+  label_text  TEXT         DEFAULT NULL COMMENT '画像下部ラベル',
+  PRIMARY KEY (panel_uid, board_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---- テキストパネル（disaster種別も兼用） ----
+-- ---- テキストパネル（disaster / label 種別も兼用） ----
 CREATE TABLE IF NOT EXISTS panel_text (
-  panel_uid   VARCHAR(64) PRIMARY KEY,
+  panel_uid   VARCHAR(64) NOT NULL,
   board_key   VARCHAR(64) NOT NULL,
   content     TEXT        DEFAULT NULL,
-  vertical    TINYINT(1)  NOT NULL DEFAULT 0 COMMENT '1=縦書き'
+  vertical    TINYINT(1)  NOT NULL DEFAULT 0 COMMENT '1=縦書き',
+  font_size   INT         NOT NULL DEFAULT 14,
+  PRIMARY KEY (panel_uid, board_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---- 無災害記録パネル ----
 CREATE TABLE IF NOT EXISTS panel_accident (
-  panel_uid    VARCHAR(64) PRIMARY KEY,
+  panel_uid    VARCHAR(64) NOT NULL,
   board_key    VARCHAR(64) NOT NULL,
   target_days  INT  NOT NULL DEFAULT 1500,
   start_date   DATE NOT NULL,
-  initial_days INT  NOT NULL DEFAULT 0 COMMENT '導入前の達成済み日数'
+  initial_days INT  NOT NULL DEFAULT 0 COMMENT '導入前の達成済み日数',
+  PRIMARY KEY (panel_uid, board_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---- 告知パネル（ヘッダー） ----
 CREATE TABLE IF NOT EXISTS panel_notice (
-  panel_uid   VARCHAR(64) PRIMARY KEY,
-  board_key   VARCHAR(64) NOT NULL
+  panel_uid   VARCHAR(64) NOT NULL,
+  board_key   VARCHAR(64) NOT NULL,
+  PRIMARY KEY (panel_uid, board_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---- 告知アイテム ----
@@ -92,11 +98,12 @@ CREATE TABLE IF NOT EXISTS notice_items (
 
 -- ---- 責任者掲示パネル ----
 CREATE TABLE IF NOT EXISTS panel_responsible (
-  panel_uid   VARCHAR(64)  PRIMARY KEY,
+  panel_uid   VARCHAR(64)  NOT NULL,
   board_key   VARCHAR(64)  NOT NULL,
   role_name   VARCHAR(255) DEFAULT '化学物質管理者',
   person_name VARCHAR(255) DEFAULT '',
-  font_size   INT          NOT NULL DEFAULT 40
+  font_size   INT          NOT NULL DEFAULT 40,
+  PRIMARY KEY (panel_uid, board_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---- スタッフ ----

@@ -114,7 +114,7 @@ const Admin = (() => {
   }
 
   // ---- サイドバー ----
-  const TYPE_LABELS = { media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知', disaster:'災害速報', responsible:'責任者掲示' };
+  const TYPE_LABELS = { media:'メディア', text:'テキスト', accident:'無災害記録', notice:'告知', disaster:'災害速報', responsible:'責任者掲示', hazard:'警戒枠', label:'カラーラベル' };
   function typeLabel(type) { return TYPE_LABELS[type] || type; }
 
   // ---- ページタブ ----
@@ -227,7 +227,7 @@ const Admin = (() => {
 
     // タイトルの自動補完（未入力の場合のみ）
     const titleInput = document.getElementById('addPanelTitle');
-    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報', responsible:'化学物質管理者' };
+    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報', responsible:'化学物質管理者', hazard:'警戒枠', label:'カラーラベル' };
     if (titleInput && !titleInput.value) titleInput.value = defaultTitles[_selectedType] || '';
 
     const confirm = document.getElementById('addPanelConfirm');
@@ -238,14 +238,16 @@ const Admin = (() => {
     if (!_selectedType) return;
     const titleInput = document.getElementById('addPanelTitle');
     const title = titleInput ? titleInput.value.trim() : '';
-    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報', responsible:'化学物質管理者' };
+    const defaultTitles = { media:'新規メディアパネル', text:'新規テキストパネル', accident:'無災害記録', notice:'告知', disaster:'○○会災害速報', responsible:'化学物質管理者', hazard:'警戒枠', label:'カラーラベル' };
 
-    const defaultSizes = { responsible: [120, 360] };
+    const defaultSizes = { responsible: [120, 360], label: [400, 100] };
     const [defW, defH] = defaultSizes[_selectedType] || [300, 200];
+    const noTitleByDefault = new Set(['label', 'hazard']);
     const panel = {
       id: 'p' + nextId++,
       type: _selectedType,
       title: title || defaultTitles[_selectedType],
+      titleVisible: !noTitleByDefault.has(_selectedType),
       x: 10, y: 10, width: defW, height: defH,
       page: currentPage,
       content: defaultContent(_selectedType),
@@ -264,6 +266,8 @@ const Admin = (() => {
       case 'notice':   return { notices: [] };
       case 'disaster':     return { items: [], slideshowEnabled: false, slideshowInterval: 5 };
       case 'responsible':  return { role: '化学物質管理者', name: '', fontSize: 40 };
+      case 'hazard':       return { borderWidth: 30, stripeSize: 30, color1: '#FFD700', color2: '#000000', innerBg: '#ffffff', text: '', fontSize: 24, textColor: '#000000' };
+      case 'label':        return { text: 'ラベルテキスト', textColor: '#ffffff', bgColor: '#e94560', fontSize: 24, textAlign: 'center', bold: true };
       default:             return {};
     }
   }
@@ -289,33 +293,42 @@ const Admin = (() => {
   }
 
   // ---- エディタ描画 ----
+  // タイトルあり/なしトグルが不要なパネル種別
+  const NO_TITLE_TOGGLE = new Set(['responsible', 'hazard', 'label']);
+
   function renderEditor(panel) {
     const ed = document.getElementById('editor');
-    // titleVisible が明示されていれば優先、未設定は title 文字列の有無で後方互換
     const hasTitle = panel.titleVisible !== undefined ? !!panel.titleVisible : !!(panel.title);
 
-    // タイトルセクション
-    const titleSection = `
-      <div class="card form-section">
-        <h3>タイトル（ヘッダー表示）</h3>
-        <div class="title-toggle-row">
-          <button class="toggle-btn ${hasTitle ? 'active' : ''}" onclick="Admin.setTitleMode(true)">あり</button>
-          <button class="toggle-btn ${hasTitle ? '' : 'active'}" onclick="Admin.setTitleMode(false)">なし</button>
-        </div>
-        <div id="titlePreviewArea" style="${hasTitle ? '' : 'display:none'}">
-          <div class="title-preview-wrap">
-            <div class="title-preview-visual">
-              <div class="title-preview-bar" id="titlePreviewBar">${esc(panel.title)}</div>
-              <div class="title-preview-body">パネル本体</div>
+    // タイトルセクション（responsible / hazard / label はトグルなしの入力欄のみ）
+    const titleSection = NO_TITLE_TOGGLE.has(panel.type)
+      ? `<div class="card form-section">
+          <h3>タイトル（ヘッダー表示）</h3>
+          <div class="form-group">
+            <input type="text" id="f_title" value="${escAttr(panel.title)}"
+              placeholder="タイトルを入力（空欄なら非表示）">
+          </div>
+        </div>`
+      : `<div class="card form-section">
+          <h3>タイトル（ヘッダー表示）</h3>
+          <div class="title-toggle-row">
+            <button class="toggle-btn ${hasTitle ? 'active' : ''}" onclick="Admin.setTitleMode(true)">あり</button>
+            <button class="toggle-btn ${hasTitle ? '' : 'active'}" onclick="Admin.setTitleMode(false)">なし</button>
+          </div>
+          <div id="titlePreviewArea" style="${hasTitle ? '' : 'display:none'}">
+            <div class="title-preview-wrap">
+              <div class="title-preview-visual">
+                <div class="title-preview-bar" id="titlePreviewBar">${esc(panel.title)}</div>
+                <div class="title-preview-body">パネル本体</div>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="form-group" style="margin-top:8px">
-          <input type="text" id="f_title" value="${escAttr(panel.title)}"
-            placeholder="タイトルを入力（「なし」でも保持されます）"
-            oninput="document.getElementById('titlePreviewBar').textContent=this.value">
-        </div>
-      </div>`;
+          <div class="form-group" style="margin-top:8px">
+            <input type="text" id="f_title" value="${escAttr(panel.title)}"
+              placeholder="タイトルを入力（「なし」でも保持されます）"
+              oninput="document.getElementById('titlePreviewBar').textContent=this.value">
+          </div>
+        </div>`;
 
     // 位置・サイズセクション（CSS transform スケール方式）
     // pos-board-inner が 1800×900 で transform:scale(0.25) → 450×225 に縮小表示
@@ -377,6 +390,8 @@ const Admin = (() => {
       case 'notice':   html += noticeEditorHtml(panel);   break;
       case 'disaster':     html += disasterEditorHtml(panel);     break;
       case 'responsible':  html += responsibleEditorHtml(panel);  break;
+      case 'hazard':       html += hazardEditorHtml(panel);       break;
+      case 'label':        html += labelEditorHtml(panel);        break;
     }
 
     html += `
@@ -457,6 +472,25 @@ const Admin = (() => {
           <div style="flex:1;background:#fff;margin:8%;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#222;overflow:hidden;border:2px solid #e0b800;">${esc(c.name||'')}</div>
           <div style="writing-mode:vertical-rl;font-size:${fs};font-weight:bold;color:#111;padding:6% 5% 6% 2%;white-space:nowrap;">${esc(c.role||'化学物質管理者')}</div>
         </div>`;
+      }
+
+      case 'hazard': {
+        const bw = c.borderWidth || 30;
+        const sz = c.stripeSize  || 30;
+        const c1 = c.color1  || '#FFD700';
+        const c2 = c.color2  || '#000000';
+        const bg = c.innerBg || '#ffffff';
+        const stripe = `repeating-linear-gradient(-45deg,${c1} 0px,${c1} ${sz}px,${c2} ${sz}px,${c2} ${sz*2}px)`;
+        return `<div style="width:100%;height:100%;background:${stripe};padding:${bw}px;box-sizing:border-box;">
+          <div style="width:100%;height:100%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:14px;color:#666;">${esc(c.text||'')}</div>
+        </div>`;
+      }
+
+      case 'label': {
+        const bg = c.bgColor   || '#e94560';
+        const tc = c.textColor || '#ffffff';
+        const fs = (c.fontSize || 24) + 'px';
+        return `<div style="width:100%;height:100%;background:${bg};display:flex;align-items:center;justify-content:center;color:${tc};font-size:${fs};font-weight:${c.bold!==false?'bold':'normal'};text-align:center;padding:8px;word-break:break-all;">${esc(c.text||'')}</div>`;
       }
 
       default: return '';
@@ -763,6 +797,118 @@ const Admin = (() => {
       </div>`;
   }
 
+  // ---- 警戒枠エディタ ----
+  function hazardEditorHtml(panel) {
+    const c = panel.content || {};
+    return `
+      <div class="card form-section">
+        <h3>警戒枠設定</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>枠の太さ (px)</label>
+            <input type="number" id="f_borderWidth" value="${c.borderWidth||30}" min="5" max="300" step="1" style="width:80px">
+          </div>
+          <div class="form-group">
+            <label>ストライプ幅 (px)</label>
+            <input type="number" id="f_stripeSize" value="${c.stripeSize||30}" min="5" max="200" step="1" style="width:80px">
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:8px;flex-wrap:wrap;gap:12px">
+          <div class="form-group">
+            <label>色1（明るい色）</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="color" id="f_color1" value="${escAttr(c.color1||'#FFD700')}" style="width:48px;height:32px;border:none;padding:0;cursor:pointer"
+                     oninput="document.getElementById('f_color1_txt').textContent=this.value">
+              <span id="f_color1_txt" style="font-size:12px;color:var(--text-dim)">${escAttr(c.color1||'#FFD700')}</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>色2（暗い色）</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="color" id="f_color2" value="${escAttr(c.color2||'#000000')}" style="width:48px;height:32px;border:none;padding:0;cursor:pointer"
+                     oninput="document.getElementById('f_color2_txt').textContent=this.value">
+              <span id="f_color2_txt" style="font-size:12px;color:var(--text-dim)">${escAttr(c.color2||'#000000')}</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>内側の背景色</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="color" id="f_innerBg" value="${escAttr(c.innerBg||'#ffffff')}" style="width:48px;height:32px;border:none;padding:0;cursor:pointer"
+                     oninput="document.getElementById('f_innerBg_txt').textContent=this.value">
+              <span id="f_innerBg_txt" style="font-size:12px;color:var(--text-dim)">${escAttr(c.innerBg||'#ffffff')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card form-section">
+        <h3>内側テキスト（省略可）</h3>
+        <div class="form-group">
+          <textarea id="f_text" rows="3" placeholder="内側に表示するテキスト（省略可）">${esc(c.text||'')}</textarea>
+        </div>
+        <div class="form-row" style="align-items:center;gap:16px;flex-wrap:wrap">
+          <label style="color:var(--text);font-size:13px;white-space:nowrap">
+            文字サイズ (px)
+            <input type="number" id="f_fontSize" value="${c.fontSize||24}" min="6" max="200" step="1" style="width:70px">
+          </label>
+          <div class="form-group" style="margin:0">
+            <label>文字色</label>
+            <input type="color" id="f_textColor" value="${escAttr(c.textColor||'#000000')}" style="width:48px;height:32px;border:none;padding:0;cursor:pointer">
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ---- カラーラベルエディタ ----
+  function labelEditorHtml(panel) {
+    const c = panel.content || {};
+    return `
+      <div class="card form-section">
+        <h3>テキスト内容</h3>
+        <div class="form-group">
+          <textarea id="f_text" rows="4">${esc(c.text||'')}</textarea>
+        </div>
+        <div class="form-row" style="margin-top:6px;align-items:center;gap:16px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:13px">
+            <input type="checkbox" id="f_bold" ${c.bold!==false?'checked':''}>
+            太字
+          </label>
+          <label style="color:var(--text);font-size:13px;white-space:nowrap">
+            文字サイズ (px)
+            <input type="number" id="f_fontSize" value="${c.fontSize||24}" min="6" max="200" step="1" style="width:70px">
+          </label>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label style="color:var(--text);font-size:13px">揃え</label>
+            <select id="f_textAlign" style="font-size:13px">
+              <option value="left"   ${(c.textAlign||'center')==='left'   ?'selected':''}>左揃え</option>
+              <option value="center" ${(c.textAlign||'center')==='center' ?'selected':''}>中央揃え</option>
+              <option value="right"  ${(c.textAlign||'center')==='right'  ?'selected':''}>右揃え</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card form-section">
+        <h3>色設定</h3>
+        <div class="form-row" style="flex-wrap:wrap;gap:12px">
+          <div class="form-group">
+            <label>文字色</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="color" id="f_textColor" value="${escAttr(c.textColor||'#ffffff')}" style="width:48px;height:32px;border:none;padding:0;cursor:pointer"
+                     oninput="document.getElementById('f_textColor_txt').textContent=this.value">
+              <span id="f_textColor_txt" style="font-size:12px;color:var(--text-dim)">${escAttr(c.textColor||'#ffffff')}</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>背景色</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="color" id="f_bgColor" value="${escAttr(c.bgColor||'#e94560')}" style="width:48px;height:32px;border:none;padding:0;cursor:pointer"
+                     oninput="document.getElementById('f_bgColor_txt').textContent=this.value">
+              <span id="f_bgColor_txt" style="font-size:12px;color:var(--text-dim)">${escAttr(c.bgColor||'#e94560')}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
   function setupDisasterUpload(panel) {
     const input = document.getElementById('disasterFileInput');
     if (!input) return;
@@ -1061,11 +1207,14 @@ const Admin = (() => {
 
     const g = id => document.getElementById(id);
 
-    // タイトル（あり/なし トグル対応）
-    const titlePreview = g('titlePreviewArea');
-    const titleShown = titlePreview && titlePreview.style.display !== 'none';
-    panel.title        = g('f_title')?.value ?? '';
-    panel.titleVisible = titleShown;
+    // タイトル（トグルなし種別はタイトルの有無で自動決定）
+    panel.title = g('f_title')?.value ?? '';
+    if (NO_TITLE_TOGGLE.has(panel.type)) {
+      panel.titleVisible = false;
+    } else {
+      const titlePreview = g('titlePreviewArea');
+      panel.titleVisible = titlePreview && titlePreview.style.display !== 'none';
+    }
 
     if (g('f_x'))     panel.x      = parseInt(g('f_x').value)  || 0;
     if (g('f_y'))     panel.y      = parseInt(g('f_y').value)  || 0;
@@ -1097,6 +1246,24 @@ const Admin = (() => {
         if (g('f_role'))     panel.content.role     = g('f_role').value;
         if (g('f_name'))     panel.content.name     = g('f_name').value;
         if (g('f_fontSize')) panel.content.fontSize = parseInt(g('f_fontSize').value) || 40;
+        break;
+      case 'hazard':
+        if (g('f_borderWidth')) panel.content.borderWidth = parseInt(g('f_borderWidth').value) || 30;
+        if (g('f_stripeSize'))  panel.content.stripeSize  = parseInt(g('f_stripeSize').value)  || 30;
+        if (g('f_color1'))      panel.content.color1      = g('f_color1').value;
+        if (g('f_color2'))      panel.content.color2      = g('f_color2').value;
+        if (g('f_innerBg'))     panel.content.innerBg     = g('f_innerBg').value;
+        if (g('f_text'))        panel.content.text        = g('f_text').value;
+        if (g('f_fontSize'))    panel.content.fontSize    = parseInt(g('f_fontSize').value) || 24;
+        if (g('f_textColor'))   panel.content.textColor   = g('f_textColor').value;
+        break;
+      case 'label':
+        if (g('f_text'))      panel.content.text      = g('f_text').value;
+        if (g('f_textColor')) panel.content.textColor = g('f_textColor').value;
+        if (g('f_bgColor'))   panel.content.bgColor   = g('f_bgColor').value;
+        if (g('f_fontSize'))  panel.content.fontSize  = parseInt(g('f_fontSize').value) || 24;
+        if (g('f_textAlign')) panel.content.textAlign = g('f_textAlign').value;
+        if (g('f_bold'))      panel.content.bold      = g('f_bold').checked;
         break;
     }
 

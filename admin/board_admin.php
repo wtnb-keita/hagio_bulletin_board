@@ -262,6 +262,16 @@ $appBase = rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROO
                 <span class="label">災害速報</span>
                 <span class="desc">○○会災害速報を表示するパネル<br>（画像・PDF・テキスト複数対応）</span>
             </button>
+            <button class="type-btn" data-type="hazard" onclick="Admin.selectType(this)">
+                <span class="icon">⚠️</span>
+                <span class="label">警戒枠</span>
+                <span class="desc">トラ柄の警戒ボーダーで囲む<br>デコレーションパネル</span>
+            </button>
+            <button class="type-btn" data-type="label" onclick="Admin.selectType(this)">
+                <span class="icon">🏷️</span>
+                <span class="label">カラーラベル</span>
+                <span class="desc">文字色・背景色を自由に<br>設定できるラベルパネル</span>
+            </button>
         </div>
         <div class="form-group" style="margin-bottom:0">
             <label>タイトル</label>
