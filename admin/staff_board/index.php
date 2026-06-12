@@ -230,9 +230,17 @@ $staffJson = json_encode($staffList, JSON_UNESCAPED_UNICODE);
 
 <header class="admin-header">
   <h1><?= htmlspecialchars($boardConfig['name']) ?> 管理画面</h1>
+  <button class="subtitle board-size-btn" onclick="openSlideSettings()"
+          title="クリックして掲示板設定を変更"
+          style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:13px;
+                 padding:2px 6px;border-radius:3px;transition:background .15s;"
+          onmouseover="this.style.background='rgba(255,255,255,.15)'"
+          onmouseout="this.style.background='none'">
+    <?= $boardConfig['width'] ?> × <?= $boardConfig['height'] ?>px ビュー ✎
+  </button>
   <div class="header-actions">
     <button class="btn btn-secondary" onclick="openMasterSettings()">📋 マスター設定</button>
-    <button class="btn btn-secondary" onclick="openSlideSettings()">⚙️ 掲示板設定</button>
+    <button class="btn btn-secondary" onclick="openSlideSettings()">🖼 スライドショー設定</button>
     <button class="btn btn-accent2" onclick="openView()">🖥 ビュー画面を開く</button>
     <button class="btn btn-success"  onclick="saveAll()">💾 保存</button>
   </div>
@@ -272,35 +280,57 @@ $staffJson = json_encode($staffList, JSON_UNESCAPED_UNICODE);
 <div class="modal-overlay" id="slideModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;">
   <div class="modal" style="width:380px;background:var(--surface);border-radius:8px;padding:20px;">
     <div class="modal-header" style="margin-bottom:16px;">
-      <h2>⚙️ 掲示板設定</h2>
+      <h2>⚙ ボード設定</h2>
       <button class="btn btn-secondary btn-sm" onclick="closeSlideSettings()" style="margin-left:auto">✕</button>
     </div>
-    <div style="font-size:12px;font-weight:bold;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">解像度</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <div class="form-group" style="flex:1;margin-bottom:0">
-        <label>幅（px）</label>
-        <input type="number" id="ss_width" value="1800" min="800" max="7680" step="1">
+    <div class="form-group" style="margin-bottom:12px">
+      <label>掲示板名</label>
+      <input type="text" id="ss_name" value="<?= htmlspecialchars($boardConfig['name']) ?>">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>幅 (px)</label>
+        <input type="number" id="ss_width" value="1800" min="400" max="7680" step="1">
       </div>
-      <div class="form-group" style="flex:1;margin-bottom:0">
-        <label>高さ（px）</label>
-        <input type="number" id="ss_height" value="900" min="400" max="4320" step="1">
+      <div class="form-group">
+        <label>高さ (px)</label>
+        <input type="number" id="ss_height" value="900" min="200" max="4320" step="1">
       </div>
     </div>
-    <div style="font-size:12px;font-weight:bold;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">スライドショー</div>
+    <div style="margin-top:6px;margin-bottom:14px">
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:6px">よく使うサイズ:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('ss_width').value=1920;document.getElementById('ss_height').value=1080">1920×1080 (FHD)</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('ss_width').value=1800;document.getElementById('ss_height').value=900">1800×900</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('ss_width').value=3840;document.getElementById('ss_height').value=2160">3840×2160 (4K)</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('ss_width').value=1280;document.getElementById('ss_height').value=720">1280×720 (HD)</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+    <p style="font-size:12px;font-weight:bold;margin-bottom:10px;color:var(--text);">🖼 スライドショー設定</p>
     <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">
       スタッフ数が12人を超えると自動的に複数ページ（12人/ページ）に分かれます。
     </p>
-    <div class="form-group" style="margin-bottom:12px">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
-        <input type="checkbox" id="ss_enabled">
-        スライドショー（自動切り替え）を有効にする
-      </label>
+    <div style="margin-bottom:12px">
+      <button id="ss_enabled"
+              data-enabled="0"
+              onclick="toggleSsBtn()"
+              style="display:inline-flex;align-items:center;gap:8px;
+                     padding:8px 20px;border-radius:20px;
+                     border:2px solid var(--border);background:var(--surface2);
+                     color:var(--text-dim);font-size:13px;font-family:inherit;
+                     cursor:pointer;transition:all .2s;font-weight:bold;">
+        <span class="ss-dot" style="width:10px;height:10px;border-radius:50%;background:#aaa;display:inline-block;transition:background .2s;"></span>
+        <span>ページ自動切り替え:</span>
+        <span class="ss-label">無効</span>
+      </button>
     </div>
-    <div class="form-group" style="margin-bottom:16px">
+    <div class="form-group" style="margin-bottom:0">
       <label>切り替え間隔（秒）</label>
       <input type="number" id="ss_interval" value="10" min="3" max="300" step="1">
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:12px">
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
       <button class="btn btn-secondary" onclick="closeSlideSettings()">キャンセル</button>
       <button class="btn btn-success" onclick="saveSlideSettings()">💾 保存</button>
     </div>
@@ -683,21 +713,38 @@ async function saveAll(silent = false) {
 /* ===== スライドショー設定 ===== */
 let _boardCfg = { slideshow_enabled: false, slideshow_interval: 10 };
 
+function _setSsBtn(enabled) {
+  const btn = document.getElementById('ss_enabled');
+  if (!btn) return;
+  btn.dataset.enabled = enabled ? '1' : '0';
+  btn.querySelector('.ss-dot').style.background = enabled ? '#4caf50' : '#aaa';
+  btn.querySelector('.ss-label').textContent     = enabled ? '有効' : '無効';
+  btn.style.background  = enabled ? 'rgba(76,175,80,0.12)' : 'var(--surface2)';
+  btn.style.borderColor = enabled ? '#4caf50'               : 'var(--border)';
+  btn.style.color       = enabled ? '#2e7d32'               : 'var(--text-dim)';
+}
+
+function toggleSsBtn() {
+  const btn = document.getElementById('ss_enabled');
+  if (btn) _setSsBtn(btn.dataset.enabled !== '1');
+}
+
 async function loadBoardCfg() {
   try {
     const r = await fetch(`${BASE_URL}/api/boards.php?board=${BOARD_KEY}`);
     const cfg = await r.json();
     _boardCfg = cfg;
-    document.getElementById('ss_enabled').checked = !!cfg.slideshow_enabled;
-    document.getElementById('ss_interval').value  = cfg.slideshow_interval || 10;
+    _setSsBtn(!!cfg.slideshow_enabled);
+    document.getElementById('ss_interval').value = cfg.slideshow_interval || 10;
   } catch(e) {}
 }
 
 function openSlideSettings() {
+  if (_boardCfg.name) document.getElementById('ss_name').value = _boardCfg.name;
   document.getElementById('ss_width').value    = _boardCfg.width  || 1800;
   document.getElementById('ss_height').value   = _boardCfg.height || 900;
-  document.getElementById('ss_enabled').checked = !!_boardCfg.slideshow_enabled;
-  document.getElementById('ss_interval').value  = _boardCfg.slideshow_interval || 10;
+  _setSsBtn(!!_boardCfg.slideshow_enabled);
+  document.getElementById('ss_interval').value = _boardCfg.slideshow_interval || 10;
   const m = document.getElementById('slideModal');
   m.style.display = 'flex';
 }
@@ -707,22 +754,18 @@ function closeSlideSettings() {
 }
 
 async function saveSlideSettings() {
+  const name     = document.getElementById('ss_name')?.value?.trim() || _boardCfg.name || '安全資格者掲示板';
   const width    = parseInt(document.getElementById('ss_width').value)    || 1800;
   const height   = parseInt(document.getElementById('ss_height').value)   || 900;
-  const enabled  = document.getElementById('ss_enabled').checked;
+  const enabled  = document.getElementById('ss_enabled').dataset.enabled === '1';
   const interval = parseInt(document.getElementById('ss_interval').value) || 10;
   try {
     await fetch(`${BASE_URL}/api/boards.php?board=${BOARD_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name:               _boardCfg.name || '安全資格者掲示板',
-        width,
-        height,
-        slideshow_enabled:  enabled,
-        slideshow_interval: interval,
-      }),
+      body: JSON.stringify({ name, width, height, slideshow_enabled: enabled, slideshow_interval: interval }),
     });
+    _boardCfg.name               = name;
     _boardCfg.width              = width;
     _boardCfg.height             = height;
     _boardCfg.slideshow_enabled  = enabled;
