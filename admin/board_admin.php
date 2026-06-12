@@ -124,6 +124,22 @@ $appBase = rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROO
 }
 .page-tab-add:hover { color: var(--accent); }
 
+/* ---- 削除済み履歴トグル ---- */
+.history-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    user-select: none;
+    transition: background .15s, color .15s;
+}
+.history-toggle:hover { background: var(--surface2); color: var(--text); }
+
 .type-selector {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -202,6 +218,11 @@ $appBase = rtrim(str_replace('\\', '/', str_replace(rtrim($_SERVER['DOCUMENT_ROO
             <button class="btn btn-secondary btn-sm" onclick="Admin.openTemplateModal()">📋 テンプレート</button>
         </div>
         <div class="panel-list" id="panelList"></div>
+        <div class="history-toggle" id="historyToggle" onclick="Admin.toggleHistory()">
+            <span>🗑 削除済み履歴</span>
+            <span id="historyToggleIcon" style="font-size:10px">▶</span>
+        </div>
+        <div id="historyPanelList" class="panel-list" style="display:none"></div>
     </aside>
 
     <main class="editor" id="editor">

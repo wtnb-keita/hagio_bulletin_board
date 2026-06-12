@@ -1123,14 +1123,6 @@ const Admin = (() => {
             <input type="date" id="f_startDate" value="${escAttr(c.startDate)}">
           </div>
         </div>
-        <div class="form-group">
-          <label>開始時点の達成済み日数（初回設定用）</label>
-          <input type="number" id="f_initialDays" value="${c.initialDays||0}" min="0"
-                 placeholder="0">
-          <p style="font-size:11px;color:var(--text-dim);margin-top:4px">
-            このシステム導入前に既に達成していた日数を入力すると、表示日数に加算されます。
-          </p>
-        </div>
       </div>`;
   }
 
@@ -1457,6 +1449,72 @@ const Admin = (() => {
     }
   }
 
+  // ---- 削除済み履歴 ----
+  let _historyOpen = false;
+
+  function toggleHistory() {
+    _historyOpen = !_historyOpen;
+    const list = document.getElementById('historyPanelList');
+    const icon = document.getElementById('historyToggleIcon');
+    if (list) list.style.display = _historyOpen ? '' : 'none';
+    if (icon) icon.textContent = _historyOpen ? '▼' : '▶';
+    if (_historyOpen) loadHistory();
+  }
+
+  async function loadHistory() {
+    const list = document.getElementById('historyPanelList');
+    if (!list) return;
+    list.innerHTML = '<div class="panel-list-empty">読み込み中...</div>';
+    try {
+      const res     = await API.getDeletedPanels(BOARD_KEY);
+      const deleted = res.panels || [];
+      if (!deleted.length) {
+        list.innerHTML = '<div class="panel-list-empty">削除済みパネルはありません</div>';
+        return;
+      }
+      list.innerHTML = deleted.map(p => {
+        const pgNum = p.page || 1;
+        const pg    = pages.find(pg => pg.page_number === pgNum);
+        const pgLabel = pg ? esc(pg.page_name) : `ページ ${pgNum}`;
+        return `
+        <div class="panel-item" style="opacity:0.6;">
+          <span class="type-tag type-${p.type}">${typeLabel(p.type)}</span>
+          <span class="panel-item-name" title="${esc(p.title || '（無題）')}">
+            ${esc(p.title || '（無題）')}<br>
+            <small style="color:var(--text-dim);font-size:10px">${pgLabel}</small>
+          </span>
+          <div class="panel-item-actions">
+            <button class="btn btn-secondary btn-sm" onclick="Admin.restorePanel('${p.id}')">↩</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      list.innerHTML = `<div class="panel-list-empty" style="color:var(--danger)">読み込みエラー</div>`;
+    }
+  }
+
+  async function restorePanel(uid) {
+    try {
+      await API.restorePanel(uid, BOARD_KEY);
+      showToast('パネルを復元しました');
+      // パネル一覧をAPIから再取得して反映
+      const res = await API.getPanels(BOARD_KEY);
+      data.panels = res.panels || [];
+      // nextId を更新
+      data.panels.forEach(p => {
+        const n = parseInt(String(p.id).replace('p', ''));
+        if (!isNaN(n) && n >= nextId) nextId = n + 1;
+      });
+      activeId = null;
+      renderPageTabs();
+      renderSidebar();
+      document.getElementById('editor').innerHTML = '<div class="editor-empty">← パネルを選択して編集</div>';
+      if (_historyOpen) loadHistory();
+    } catch(e) {
+      showToast('復元失敗: ' + e.message, true);
+    }
+  }
+
   // ---- 公開API ----
   return {
     init,
@@ -1496,6 +1554,9 @@ const Admin = (() => {
     closeTemplateModal,
     applyTemplate,
     deleteTemplate,
+    toggleHistory,
+    loadHistory,
+    restorePanel,
   };
 })();
 

@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS panels (
   sort_order   INT        NOT NULL DEFAULT 0,
   page_number  INT        NOT NULL DEFAULT 1  COMMENT '所属ページ番号',
   title_visible TINYINT(1) NOT NULL DEFAULT 1  COMMENT '1=タイトル表示',
+  is_delete   TINYINT(1)  NOT NULL DEFAULT 0  COMMENT '1=論理削除済み',
   created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_board_uid (board_key, panel_uid)

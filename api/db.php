@@ -76,7 +76,7 @@ function fetchPanels(string $boardKey): array {
     $pdo = getPDO();
 
     $stmt = $pdo->prepare(
-        'SELECT * FROM panels WHERE board_key = ? ORDER BY sort_order, id'
+        'SELECT * FROM panels WHERE board_key = ? AND is_delete = 0 ORDER BY sort_order, id'
     );
     $stmt->execute([$boardKey]);
     $rows = $stmt->fetchAll();

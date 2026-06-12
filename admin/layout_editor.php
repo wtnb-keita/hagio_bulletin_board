@@ -256,6 +256,26 @@ body { width: auto !important; height: 100vh !important; background: var(--bg) !
 .info-row b     { color:var(--text); }
 
 .layout-main { display:flex; flex:1; overflow:hidden; }
+
+/* ---- スマートガイド ---- */
+.sg-h {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: #ff4081;
+  pointer-events: none;
+  z-index: 2000;
+  display: none;
+}
+.sg-v {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: #00b0ff;
+  pointer-events: none;
+  z-index: 2000;
+  display: none;
+}
 </style>
 </head>
 <body>
@@ -374,6 +394,69 @@ function resetView() {
   applyScale();
 }
 
+// ---- スマートガイド & スナップ ----
+const SNAP_THRESHOLD = 8; // px (ボード実寸)
+const _sgH = [], _sgV = []; // ガイド DOM 要素
+
+function _initGuides() {
+  const board = document.getElementById('layoutBoard');
+  _sgH.length = 0; _sgV.length = 0;
+  for (let i = 0; i < 4; i++) {
+    const h = document.createElement('div'); h.className = 'sg-h'; board.appendChild(h); _sgH.push(h);
+    const v = document.createElement('div'); v.className = 'sg-v'; board.appendChild(v); _sgV.push(v);
+  }
+}
+
+function _clearGuides() {
+  _sgH.forEach(g => g.style.display = 'none');
+  _sgV.forEach(g => g.style.display = 'none');
+}
+
+function _showHGuide(y, i) { if (i < _sgH.length) { _sgH[i].style.top = y + 'px'; _sgH[i].style.display = 'block'; } }
+function _showVGuide(x, i) { if (i < _sgV.length) { _sgV[i].style.left = x + 'px'; _sgV[i].style.display = 'block'; } }
+
+function _snapTargets(excludeId) {
+  const xs = new Set([0, BOARD_W]);
+  const ys = new Set([0, BOARD_H]);
+  panels.filter(p => (p.page || 1) === currentPage && p.id !== excludeId).forEach(p => {
+    xs.add(p.x); xs.add(p.x + p.width); xs.add(p.x + Math.round(p.width / 2));
+    ys.add(p.y); ys.add(p.y + p.height); ys.add(p.y + Math.round(p.height / 2));
+  });
+  return { xs: [...xs], ys: [...ys] };
+}
+
+function _nearest(val, targets) {
+  let best = null, bestD = SNAP_THRESHOLD;
+  for (const t of targets) { const d = Math.abs(val - t); if (d < bestD) { bestD = d; best = t; } }
+  return best;
+}
+
+function _snapDrag(l, t, w, h, excludeId) {
+  const { xs, ys } = _snapTargets(excludeId);
+  _clearGuides();
+  let vi = 0, hi = 0;
+  const sL = _nearest(l, xs), sR = _nearest(l + w, xs), sC = _nearest(l + Math.round(w / 2), xs);
+  if      (sL !== null) { l = sL;                     _showVGuide(sL, vi++); }
+  else if (sR !== null) { l = sR - w;                 _showVGuide(sR, vi++); }
+  else if (sC !== null) { l = sC - Math.round(w / 2); _showVGuide(sC, vi++); }
+  const sT = _nearest(t, ys), sB = _nearest(t + h, ys), sM = _nearest(t + Math.round(h / 2), ys);
+  if      (sT !== null) { t = sT;                     _showHGuide(sT, hi++); }
+  else if (sB !== null) { t = sB - h;                 _showHGuide(sB, hi++); }
+  else if (sM !== null) { t = sM - Math.round(h / 2); _showHGuide(sM, hi++); }
+  return { l, t };
+}
+
+function _snapResize(l, t, w, h, excludeId, dir) {
+  const { xs, ys } = _snapTargets(excludeId);
+  _clearGuides();
+  let vi = 0, hi = 0;
+  if (dir.includes('w')) { const s = _nearest(l, xs);     if (s !== null) { w = (l + w) - s; l = s; _showVGuide(s, vi++); } }
+  if (dir.includes('e')) { const s = _nearest(l + w, xs); if (s !== null) { w = s - l;       _showVGuide(s, vi++); } }
+  if (dir.includes('n')) { const s = _nearest(t, ys);     if (s !== null) { h = (t + h) - s; t = s; _showHGuide(s, hi++); } }
+  if (dir.includes('s')) { const s = _nearest(t + h, ys); if (s !== null) { h = s - t;       _showHGuide(s, hi++); } }
+  return { l, t, w, h };
+}
+
 // ---- ボード描画（現在ページのみ・sort_order順） ----
 function renderBoard() {
   const board = document.getElementById('layoutBoard');
@@ -386,6 +469,8 @@ function renderBoard() {
     .slice()
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   pagePanels.forEach(p => board.appendChild(createPanelEl(p)));
+
+  _initGuides(); // ガイド要素をパネルの上に追加
 }
 
 function createPanelEl(p) {
@@ -463,19 +548,22 @@ function setupDragResize(el, panelData) {
     const dx = e.clientX / scale - startX;
     const dy = e.clientY / scale - startY;
     if (mode === 'drag') {
-      commit(origL + dx, origT + dy, parseInt(el.style.width), parseInt(el.style.height));
+      const w = parseInt(el.style.width), h = parseInt(el.style.height);
+      const { l, t } = _snapDrag(origL + dx, origT + dy, w, h, panelData.id);
+      commit(l, t, w, h);
     } else {
       let l=origL, t=origT, w=origW, h=origH;
       if (dir.includes('e')) w = origW + dx;
       if (dir.includes('s')) h = origH + dy;
       if (dir.includes('w')) { l = origL + dx; w = origW - dx; }
       if (dir.includes('n')) { t = origT + dy; h = origH - dy; }
-      commit(l, t, w, h);
+      const snapped = _snapResize(l, t, w, h, panelData.id, dir);
+      commit(snapped.l, snapped.t, snapped.w, snapped.h);
     }
   });
 
-  el.addEventListener('pointerup',    () => { mode = null; dir = null; });
-  el.addEventListener('pointercancel',() => { mode = null; dir = null; });
+  el.addEventListener('pointerup',    () => { mode = null; dir = null; _clearGuides(); });
+  el.addEventListener('pointercancel',() => { mode = null; dir = null; _clearGuides(); });
 }
 
 // ---- 選択 ----
@@ -605,7 +693,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('DOMContentLoaded', () => {
   renderPageTabs();
   resetView();
-  renderBoard();
+  renderBoard(); // renderBoard 内で _initGuides() を呼ぶ
   renderSideList();
 });
 </script>

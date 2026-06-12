@@ -16,12 +16,30 @@ if ($method === 'GET' && ($_GET['action'] ?? '') === 'version') {
     jsonResponse(['version' => $versions[$boardKey] ?? 0]);
 }
 
+// ---- GET: 削除済みパネル一覧取得 ----
+if ($method === 'GET' && ($_GET['action'] ?? '') === 'history') {
+    $pdo  = getPDO();
+    $stmt = $pdo->prepare('SELECT * FROM panels WHERE board_key = ? AND is_delete = 1 ORDER BY updated_at DESC');
+    $stmt->execute([$boardKey]);
+    $rows = $stmt->fetchAll();
+    $result = [];
+    foreach ($rows as $row) {
+        $result[] = [
+            'id'    => $row['panel_uid'],
+            'type'  => $row['type'],
+            'title' => $row['title'],
+            'page'  => (int)($row['page_number'] ?? 1),
+        ];
+    }
+    jsonResponse(['panels' => $result]);
+}
+
 // ---- GET: パネル一覧取得 ----
 if ($method === 'GET') {
     $pdo = getPDO();
 
     $panels = $pdo->prepare(
-        'SELECT * FROM panels WHERE board_key = ? ORDER BY sort_order, id'
+        'SELECT * FROM panels WHERE board_key = ? AND is_delete = 0 ORDER BY sort_order, id'
     );
     $panels->execute([$boardKey]);
     $rows = $panels->fetchAll();
@@ -164,6 +182,17 @@ if ($method === 'GET') {
     jsonResponse(['panels' => $result]);
 }
 
+// ---- POST: パネル復元 ----
+if ($method === 'POST' && ($_GET['action'] ?? '') === 'restore') {
+    $body = json_decode(file_get_contents('php://input'), true);
+    $uid  = $body['uid'] ?? '';
+    if (!$uid) errorResponse('uid required');
+    $pdo = getPDO();
+    $pdo->prepare('UPDATE panels SET is_delete=0 WHERE panel_uid=? AND board_key=?')
+        ->execute([$uid, $boardKey]);
+    jsonResponse(['ok' => true]);
+}
+
 // ---- POST: パネル一括保存 ----
 if ($method === 'POST') {
     $body = json_decode(file_get_contents('php://input'), true);
@@ -175,17 +204,18 @@ if ($method === 'POST') {
     $pdo->beginTransaction();
 
     try {
-        // 既存パネルUID一覧
-        $existing = $pdo->prepare('SELECT panel_uid FROM panels WHERE board_key=?');
+        // 現在アクティブなパネルUID一覧（論理削除済みは除外）
+        $existing = $pdo->prepare('SELECT panel_uid FROM panels WHERE board_key=? AND is_delete=0');
         $existing->execute([$boardKey]);
         $existingUids = array_column($existing->fetchAll(), 'panel_uid');
 
         $incomingUids = array_column($body['panels'], 'id');
 
-        // 削除されたパネル
+        // 送信リストから外れたパネルを論理削除
         foreach ($existingUids as $uid) {
             if (!in_array($uid, $incomingUids)) {
-                deletePanel($pdo, $uid, $boardKey);
+                $pdo->prepare('UPDATE panels SET is_delete=1 WHERE panel_uid=? AND board_key=?')
+                    ->execute([$uid, $boardKey]);
             }
         }
 
@@ -195,15 +225,16 @@ if ($method === 'POST') {
             $type = $p['type'];
 
             $pdo->prepare(
-                'INSERT INTO panels (board_key, panel_uid, type, title, pos_x, pos_y, width, height, sort_order, page_number, title_visible)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                'INSERT INTO panels (board_key, panel_uid, type, title, pos_x, pos_y, width, height, sort_order, page_number, title_visible, is_delete)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,0)
                  ON DUPLICATE KEY UPDATE
                    type=VALUES(type), title=VALUES(title),
                    pos_x=VALUES(pos_x), pos_y=VALUES(pos_y),
                    width=VALUES(width), height=VALUES(height),
                    sort_order=VALUES(sort_order),
                    page_number=VALUES(page_number),
-                   title_visible=VALUES(title_visible)'
+                   title_visible=VALUES(title_visible),
+                   is_delete=0'
             )->execute([
                 $boardKey, $uid, $type,
                 $p['title'] ?? '',

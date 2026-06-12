@@ -77,5 +77,19 @@ const API = (() => {
         body: JSON.stringify({ pages }),
       });
     },
+
+    /** 削除済みパネル一覧取得 */
+    getDeletedPanels(boardKey = BOARD_KEY) {
+      return request(`${BASE}/panels.php?board=${boardKey}&action=history`);
+    },
+
+    /** パネルを復元（is_delete=0 に戻す） */
+    restorePanel(uid, boardKey = BOARD_KEY) {
+      return request(`${BASE}/panels.php?board=${boardKey}&action=restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid }),
+      });
+    },
   };
 })();
