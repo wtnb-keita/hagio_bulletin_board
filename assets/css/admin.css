@@ -1,7 +1,7 @@
 /* ===================================================
    管理画面専用スタイル
    =================================================== */
-body { min-height: 100vh; display: flex; flex-direction: column; }
+body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
 /* ---- ヘッダー ---- */
 .admin-header {
@@ -60,7 +60,7 @@ body { min-height: 100vh; display: flex; flex-direction: column; }
 
 /* ---- サイドバー ---- */
 .sidebar {
-  width: 300px;
+  width: 350px;
   flex-shrink: 0;
   background: var(--surface);
   border-right: 1px solid var(--border);
@@ -69,50 +69,50 @@ body { min-height: 100vh; display: flex; flex-direction: column; }
   overflow: hidden;
 }
 .sidebar-header {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
-.sidebar-header h2 { font-size: 14px; flex: 1; }
+.sidebar-header h2 { font-size: 16px; flex: 1; }
 
 .panel-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 9px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 .panel-list-empty {
   color: var(--text-dim);
   font-size: 12px;
-  padding: 12px;
+  padding: 14px;
   text-align: center;
 }
 
 .panel-item {
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 10px;
+  border-radius: 8px;
+  padding: 11px 14px;
   cursor: pointer;
   transition: border-color 0.15s;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .panel-item:hover       { border-color: var(--accent); }
 .panel-item.active      { border-color: var(--accent); background: #e8f5e9; }
-.panel-item-name        { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.panel-item-actions     { display: flex; gap: 4px; flex-shrink: 0; }
+.panel-item-name        { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.panel-item-actions     { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* ---- エディタ ---- */
 .editor {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 22px;
 }
 .editor-empty {
   display: flex;
@@ -120,12 +120,12 @@ body { min-height: 100vh; display: flex; flex-direction: column; }
   justify-content: center;
   height: 100%;
   color: var(--text-dim);
-  font-size: 15px;
+  font-size: 17px;
 }
-.editor-form       { max-width: 720px; }
-.editor-form h2    { font-size: 16px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); color: var(--accent); }
+.editor-form       { max-width: 100%; }
+.editor-form h2    { font-size: 18px; margin-bottom: 22px; padding-bottom: 10px; border-bottom: 1px solid var(--border); color: var(--accent); }
 
-.form-section      { margin-bottom: 14px; }
+.form-section      { margin-bottom: 20px; }
 
 /* ---- 告知カード ---- */
 .notice-list       { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
@@ -236,11 +236,10 @@ body { min-height: 100vh; display: flex; flex-direction: column; }
 /* ---- ビジュアル配置エディタ ---- */
 .pos-editor { user-select: none; }
 
-/* 外側コンテナ（表示サイズ 450×225） */
+/* 外側コンテナ（幅100%・高さはJSで設定） */
 .pos-board {
   position: relative;
-  width: 450px;
-  height: 225px;
+  width: 60%;
   border: 1px solid var(--border);
   border-radius: 4px;
   overflow: hidden;
@@ -248,14 +247,13 @@ body { min-height: 100vh; display: flex; flex-direction: column; }
   margin-bottom: 10px;
 }
 
-/* 内側：1800×900 を scale(0.25) で縮小 */
+/* 内側：1800×900 をJSで算出したscaleで縮小 */
 .pos-board-inner {
   position: absolute;
   top: 0; left: 0;
   width: 1800px;
   height: 900px;
   background: #0f3460;
-  transform: scale(0.25);
   transform-origin: top left;
 }
 

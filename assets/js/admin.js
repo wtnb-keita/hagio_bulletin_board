@@ -463,12 +463,29 @@ const Admin = (() => {
 
   // ---- ビジュアル配置エディタ ----
   const BOARD_W = 1800, BOARD_H = 900;
-  const SCALE   = 0.25; // CSS transform scale — マウス座標→実座標変換に使用
   const MIN_SZ  = 50;   // 実寸最小値(px)
+
+  function getPosScale() {
+    const board = document.getElementById('posBoard');
+    return board ? board.clientWidth / BOARD_W : 0.25;
+  }
+
+  function applyPosScale() {
+    const board = document.getElementById('posBoard');
+    const inner = document.getElementById('posBoardInner');
+    if (!board || !inner) return;
+    const scale = getPosScale();
+    board.style.height = Math.round(BOARD_H * scale) + 'px';
+    inner.style.transform = `scale(${scale})`;
+  }
 
   function initPositionEditor() {
     const posPanel = document.getElementById('posPanel');
     if (!posPanel) return;
+
+    applyPosScale();
+    const ro = new ResizeObserver(applyPosScale);
+    ro.observe(document.getElementById('posBoard'));
 
     let mode   = null; // 'drag' | 'resize'
     let dir    = null;
@@ -536,9 +553,9 @@ const Admin = (() => {
 
     posPanel.addEventListener('pointermove', e => {
       if (!mode) return;
-      // clientX/Y はスクリーン座標 → SCALE で割って実寸に換算
-      const dx = (e.clientX - startX) / SCALE;
-      const dy = (e.clientY - startY) / SCALE;
+      const scale = getPosScale();
+      const dx = (e.clientX - startX) / scale;
+      const dy = (e.clientY - startY) / scale;
 
       if (mode === 'drag') {
         setRect(origL + dx, origT + dy, getRect().w, getRect().h);
@@ -561,7 +578,7 @@ const Admin = (() => {
     const previewHtml = c.filePath ? `
       <div class="file-preview" id="filePreview">
         ${c.fileType === 'application/pdf'
-          ? `<div style="font-size:24px">📄</div>`
+          ? `<div style="font-size:80px;line-height:1">📄</div>`
           : `<img src="${c.filePath}" alt="preview">`}
         <div class="file-preview-info">
           <div class="file-preview-name">${esc(c.fileName)}</div>
@@ -574,19 +591,20 @@ const Admin = (() => {
       <div class="card form-section">
         <h3>ファイル（画像 / PDF）</h3>
         <div class="file-drop" id="fileDrop" onclick="document.getElementById('fileInput').click()">
+          <div style="font-size:40px;margin-bottom:10px">🖼️</div>
           クリックまたはドロップで画像・PDFをアップロード<br>
-          <span style="font-size:11px;color:#666">JPEG / PNG / GIF / WEBP / PDF（最大20MB）</span>
+          <span style="font-size:13px;color:#888">JPEG / PNG / GIF / WEBP / PDF（最大20MB）</span>
         </div>
         <input type="file" id="fileInput" accept="image/*,application/pdf" style="display:none">
         ${previewHtml}
-        <div style="margin-top:8px">
-          <button class="btn btn-secondary btn-sm" onclick="Admin.openUploadLibrary()">📁 アップロード済みから選択</button>
+        <div style="margin-top:12px">
+          <button class="btn btn-secondary" onclick="Admin.openUploadLibrary()">📁 アップロード済みから選択</button>
         </div>
       </div>
       <div class="card form-section">
         <h3>ラベル（ファイル下部テキスト）</h3>
         <div class="form-group">
-          <textarea id="f_label" placeholder="画像・PDFの下部に重ねて表示するテキスト（省略可）">${esc(c.label)}</textarea>
+          <textarea id="f_label" rows="4" placeholder="画像・PDFの下部に重ねて表示するテキスト（省略可）">${esc(c.label)}</textarea>
         </div>
       </div>`;
   }
@@ -639,7 +657,7 @@ const Admin = (() => {
     prev.innerHTML = `
       <div class="file-preview">
         ${c.fileType === 'application/pdf'
-          ? `<div style="font-size:24px">📄</div>`
+          ? `<div style="font-size:80px;line-height:1">📄</div>`
           : `<img src="${c.filePath}" alt="preview">`}
         <div class="file-preview-info">
           <div class="file-preview-name">${esc(c.fileName)}</div>
